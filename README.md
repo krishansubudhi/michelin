@@ -32,6 +32,18 @@ total: 1/2 CUJs passed
 
 `toy-name` expects "Alice", so the judges must fail it: that is the must-fail control. Optional: `npm link` puts `michelin` on your PATH (set `npm config set prefix ~/.local` first).
 
+## A real agent: OpenCode
+
+`subjects/opencode` evaluates [OpenCode](https://opencode.ai), the open-source AI coding agent for the terminal, on three CUJs: make a failing unit test pass, answer a question about a two-file repo without editing it (OpenCode's read-only `plan` agent), and a must-fail control. Install it at user level and give it a model of its own; an Ollama model that supports tool calls works, free and local:
+
+```sh
+npm install -g opencode-ai
+export OPENCODE_MODEL=ollama/<model>   # an Ollama model with tool calls; the recorded run used Gemma 4 26B
+node src/run/runner.ts subjects/opencode subjects/opencode/cujs/opencode/
+```
+
+A healthy run ends `total: 2/3 CUJs passed`; the one FAIL is `opencode-fail_control`. Scores from a real run are in [`subjects/opencode/RESULTS.md`](subjects/opencode/RESULTS.md).
+
 ## Concepts
 
 - A **subject** is a folder of plain markdown: `setup.md` (start it, print what later steps need), `howtorun.md` (how to talk to it) and `teardown.md` (stop it and delete what it made). It may add `.sh`/`.py` helpers.

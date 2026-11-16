@@ -1,0 +1,29 @@
+instruction: |
+  Before calling OpenCode, write two files in WORK yourself, with exactly these lines.
+
+  calc.py:
+
+      def average(xs):
+          return sum(xs) / (len(xs) + 1)
+
+  test_calc.py:
+
+      import unittest
+      from calc import average
+
+      class TestAverage(unittest.TestCase):
+          def test_average(self):
+              self.assertEqual(average([2, 4, 6]), 4)
+
+      if __name__ == "__main__":
+          unittest.main()
+
+  Run `python3 -m unittest test_calc` in WORK and record its output (it fails), and record `shasum test_calc.py`.
+  Then ask OpenCode: "The test in test_calc.py fails. Fix calc.py so it passes; do not change the test."
+  Do not touch either file yourself after that. Run `python3 -m unittest test_calc` again, and record its output, `cat calc.py` and `shasum test_calc.py`.
+timeout_s: 900
+expectations:
+  - |
+    Before OpenCode's call the unit test failed.
+  - |
+    After OpenCode's call the same unit test passed (OK), calc.py still defines average(xs), and test_calc.py is unchanged (same shasum before and after).
