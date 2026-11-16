@@ -52,7 +52,7 @@ test("loadCuj refuses a given that is not a map", () => {
 
 test("a CUJ path becomes its id: the path under cujs/", () => {
   assert.equal(cujId("test/fixtures/subjects/toy-v1/cujs/chat/name.yaml"), "chat-name");
-  assert.equal(cujId("subjects/aider/cujs/aider/fix_test.yaml"), "aider-fix_test");
+  assert.equal(cujId("subjects/toy/cujs/toy/country.yaml"), "toy-country");
 });
 
 test("loadCuj refuses a bad CUJ and names the file", () => {
@@ -111,10 +111,9 @@ test("a CUJ folder expands to every .yaml directly in it, sorted; files stay as 
   mkdirSync(join(d, "sub"));
   writeFileSync(join(d, "sub", "c.yaml"), "");
   assert.deepEqual(expandCujs([d, "x/one.yaml"]), [join(d, "a.yaml"), join(d, "b.yaml"), "x/one.yaml"]);
-  assert.deepEqual(expandCujs(["subjects/aider/cujs/aider"]), [
-    "subjects/aider/cujs/aider/ask_repo.yaml",
-    "subjects/aider/cujs/aider/fail_control.yaml",
-    "subjects/aider/cujs/aider/fix_test.yaml",
+  assert.deepEqual(expandCujs(["subjects/toy/cujs/toy"]), [
+    "subjects/toy/cujs/toy/country.yaml",
+    "subjects/toy/cujs/toy/name.yaml",
   ]);
   const empty = tmp("cujempty-");
   assert.throws(() => expandCujs([empty]), new RegExp(`${empty}: no .yaml CUJ files`));
@@ -122,9 +121,9 @@ test("a CUJ folder expands to every .yaml directly in it, sorted; files stay as 
 
 test("CUJs listed one by one share a run; a folder gives each CUJ a fresh run of its own", () => {
   assert.deepEqual(runGroups(["x/a.yaml", "x/b.yaml"], ["x/a.yaml", "x/b.yaml"]), [["x/a.yaml", "x/b.yaml"]]);
-  const files = expandCujs(["subjects/aider/cujs/aider"]);
+  const files = expandCujs(["subjects/toy/cujs/toy"]);
   assert.deepEqual(
-    runGroups(["subjects/aider/cujs/aider"], files),
+    runGroups(["subjects/toy/cujs/toy"], files),
     files.map((f) => [f]),
   );
 });

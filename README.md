@@ -32,21 +32,10 @@ total: 1/2 CUJs passed
 
 `toy-name` expects "Alice", so the judges must fail it: that is the must-fail control. Optional: `npm link` puts `michelin` on your PATH (set `npm config set prefix ~/.local` first).
 
-## A real agent: Aider
-
-`subjects/aider` evaluates [Aider](https://aider.chat), the open-source AI pair programmer, on three CUJs: make a failing unit test pass, answer a question about a two-file repo without editing it, and a must-fail control. Aider runs through `uvx` ([uv](https://docs.astral.sh/uv/)), so nothing is installed globally. It needs a model of its own:
-
-```sh
-ollama pull qwen2.5-coder:7b && export AIDER_MODEL=ollama_chat/qwen2.5-coder:7b   # free and local
-node src/run/runner.ts subjects/aider subjects/aider/cujs/aider/
-```
-
-A healthy run ends `total: 2/3 CUJs passed`; the one FAIL is `aider-fail_control`. Results from a real run are in `subjects/aider/RESULTS.md`.
-
 ## Concepts
 
 - A **subject** is a folder of plain markdown: `setup.md` (start it, print what later steps need), `howtorun.md` (how to talk to it) and `teardown.md` (stop it and delete what it made). It may add `.sh`/`.py` helpers.
-- A **CUJ** is a yaml file with `instruction`, `timeout_s`, `expectations`, an optional `story` (a note for humans) and an optional `given` (state seeded before the CUJ). CUJs live in their subject, `subjects/<name>/cujs/`. Its id is its path under the last `cujs/`, dashed (`aider-fix_test`).
+- A **CUJ** is a yaml file with `instruction`, `timeout_s`, `expectations`, an optional `story` (a note for humans) and an optional `given` (state seeded before the CUJ). CUJs live in their subject, `subjects/<name>/cujs/`. Its id is its path under the last `cujs/`, dashed (`toy-country`).
 - Four roles, each a `claude -p` call: the **constructor** runs setup, the **executor** carries out the CUJ and records evidence, the **destructor** runs teardown, and the **judges** score each expectation from the evidence alone. `settings.json` picks the model per role; `--settings <file>` overrides it.
 - A CUJ argument may be a folder: every `*.yaml` directly in it runs, each on a fresh start. Files listed one by one share one run. Only one michelin runs per machine at a time (`/tmp/michelin/run.lock`).
 - Test subjects for the unit and integration tests are in `test/fixtures/subjects/`.
