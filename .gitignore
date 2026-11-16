@@ -1,0 +1,4 @@
+# no dot-files in git except this one
+.*
+!.gitignore
+node_modules/

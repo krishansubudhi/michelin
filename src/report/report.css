@@ -1,0 +1,318 @@
+/* Tailwind source for the HTML report. `npm run css` compiles it into src/report/tailwind.gen.ts, which render.ts inlines,
+   so report.html stays one offline file. The report's markup keeps semantic class names (tests and the page script
+   rely on them); this file styles them with @apply. Dark mode follows prefers-color-scheme (Tailwind's default). */
+@import "tailwindcss" source(none);
+/* Markup is not scanned: its semantic names (grid, ring, table...) would collide with utilities. */
+@source inline("sr-only");
+@import "./report-timeline.css";
+
+@theme {
+  --font-sans:
+    "InterVariable", "Inter var", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+
+@layer base {
+  :root {
+    interpolate-size: allow-keywords;
+    --ok: var(--color-emerald-600);
+    --bad: var(--color-rose-600);
+    --run: var(--color-sky-600);
+    --na: var(--color-zinc-400);
+    --surface: var(--color-white);
+    --edge: rgb(0 0 0 / 0.08);
+    @apply scheme-light dark:scheme-dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ok: var(--color-emerald-400);
+      --bad: var(--color-rose-400);
+      --run: var(--color-sky-400);
+      --na: var(--color-zinc-500);
+      --surface: var(--color-zinc-900);
+      --edge: rgb(0 0 0 / 0.6);
+    }
+  }
+  body {
+    @apply bg-zinc-50 font-sans text-[15px] leading-relaxed text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100;
+  }
+  :focus-visible {
+    @apply rounded-md outline-2 outline-offset-2 outline-sky-600 dark:outline-sky-400;
+  }
+  h2 {
+    @apply mb-3 text-base font-semibold tracking-tight;
+  }
+  h3 {
+    @apply mt-5 mb-2 text-xs font-semibold tracking-wider text-zinc-500 uppercase dark:text-zinc-400;
+  }
+  abbr[title] {
+    @apply no-underline;
+  }
+}
+
+@layer components {
+  .page {
+    @apply mx-auto max-w-4xl px-4 pb-16 sm:px-6;
+  }
+
+  /* Header */
+  .bar {
+    @apply sticky top-0 z-10 border-b border-zinc-200/80 bg-white/85 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/80;
+  }
+  .bar-in {
+    @apply mx-auto flex max-w-4xl flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 sm:px-6;
+  }
+  .bar h1 {
+    @apply min-w-0 flex-1 truncate text-lg font-semibold tracking-tight sm:text-xl;
+  }
+  .bar .muted {
+    @apply basis-full text-xs tabular-nums;
+  }
+  .muted,
+  .why,
+  .notes {
+    @apply text-sm text-zinc-600 dark:text-zinc-400;
+  }
+
+  /* Pills: colour plus an icon plus the word, never colour alone. */
+  .pill {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap ring-1 ring-inset;
+  }
+  .pill::before {
+    @apply text-[0.85em] leading-none;
+  }
+  .pill.ok {
+    @apply bg-emerald-50 text-emerald-800 ring-emerald-600/25 before:content-['✓'] dark:bg-emerald-400/10 dark:text-emerald-300 dark:ring-emerald-400/25;
+  }
+  .pill.bad {
+    @apply bg-rose-50 text-rose-800 ring-rose-600/25 before:content-['✕'] dark:bg-rose-400/10 dark:text-rose-300 dark:ring-rose-400/25;
+  }
+  .pill.na {
+    @apply bg-zinc-100 text-zinc-700 ring-zinc-500/20 before:content-['–'] dark:bg-zinc-400/10 dark:text-zinc-300 dark:ring-zinc-400/20;
+  }
+  .pill.run {
+    @apply bg-sky-50 text-sky-800 ring-sky-600/25 before:content-['●'] dark:bg-sky-400/10 dark:text-sky-300 dark:ring-sky-400/25;
+  }
+  .pill.run::before {
+    animation: blink 1.6s ease-in-out infinite;
+    @apply motion-reduce:animate-none;
+  }
+  .status {
+    @apply px-3 py-1 text-sm font-semibold;
+  }
+
+  /* Cards */
+  .card,
+  .tile,
+  .node {
+    @apply rounded-2xl bg-white shadow-sm ring-1 shadow-zinc-900/[0.03] ring-zinc-200/80 dark:bg-zinc-900 dark:shadow-none dark:ring-zinc-800;
+  }
+  .card {
+    @apply my-6 p-4 wrap-anywhere sm:p-6;
+  }
+  .banner {
+    @apply my-6 flex gap-3 rounded-2xl bg-rose-50 p-4 font-medium text-rose-900 ring-1 ring-rose-600/20 before:content-['⚠'] dark:bg-rose-400/10 dark:text-rose-200 dark:ring-rose-400/25;
+  }
+  .err {
+    @apply text-sm text-rose-700 dark:text-rose-300;
+  }
+
+  /* Summary tiles: score ring hero plus four stats. */
+  .tiles {
+    @apply my-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:grid-rows-2 sm:gap-4;
+  }
+  .tile {
+    @apply flex flex-col justify-center p-3.5 text-sm sm:p-4 text-zinc-600 dark:text-zinc-400;
+  }
+  .tile b {
+    @apply block text-xl font-semibold sm:text-2xl tracking-tight text-zinc-900 tabular-nums dark:text-zinc-50;
+  }
+  .tile.hero {
+    @apply col-span-2 flex-row items-center justify-start gap-5 p-4 sm:row-span-2 sm:p-6;
+  }
+  .hero .score {
+    @apply size-20 shrink-0 sm:size-32;
+  }
+  .score .track {
+    stroke: var(--bad);
+    @apply opacity-90;
+  }
+  .score .track.none {
+    @apply stroke-zinc-200 opacity-100 dark:stroke-zinc-700;
+  }
+  .score .fill {
+    stroke: var(--ok);
+    animation: ring-fill 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+    @apply motion-reduce:animate-none;
+  }
+  .score text {
+    @apply fill-zinc-900 text-[8px] font-semibold dark:fill-zinc-50;
+  }
+  .headline {
+    @apply text-lg font-semibold tracking-tight text-zinc-900 sm:text-xl dark:text-zinc-50;
+  }
+  .headline.bad {
+    @apply text-rose-700 dark:text-rose-300;
+  }
+  .kicker {
+    @apply text-xs font-semibold tracking-wider uppercase;
+  }
+  .allpass .hero {
+    @apply bg-linear-to-br from-emerald-50 via-white to-teal-50 ring-emerald-600/25 dark:from-emerald-400/10 dark:via-zinc-900 dark:to-teal-400/10 dark:ring-emerald-400/25;
+  }
+  .allpass .score {
+    @apply drop-shadow-[0_0_12px_rgb(16_185_129/0.35)];
+  }
+  .allpass .headline {
+    @apply text-emerald-800 dark:text-emerald-300;
+  }
+  .spark {
+    @apply inline-block text-emerald-500;
+    animation: twinkle 2.4s ease-in-out infinite;
+    @apply motion-reduce:animate-none;
+  }
+
+  /* Tables: real headers, horizontal scroll with edge shadows on narrow screens. */
+  .scroll {
+    @apply relative -mx-1 overflow-x-auto px-1 [scrollbar-width:thin];
+    background:
+      linear-gradient(to right, var(--surface) 30%, transparent) left / 2rem 100% no-repeat local,
+      linear-gradient(to left, var(--surface) 30%, transparent) right / 2rem 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%, var(--edge), transparent) left / 0.75rem 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%, var(--edge), transparent) right / 0.75rem 100% no-repeat scroll;
+  }
+  table {
+    @apply w-full text-sm;
+  }
+  th {
+    @apply py-2 pr-3 text-left align-bottom text-xs font-medium text-zinc-500 dark:text-zinc-400;
+  }
+  td,
+  tbody th {
+    @apply border-t border-zinc-100 py-2 pr-3 align-top dark:border-zinc-800;
+  }
+  tbody th {
+    @apply text-sm font-normal text-zinc-900 dark:text-zinc-100;
+  }
+  .votes th:first-child {
+    @apply sticky left-0 z-[1] min-w-32 bg-white pr-3 sm:min-w-48 dark:bg-zinc-900;
+  }
+  .sessions {
+    @apply min-w-[36rem];
+  }
+  .sessions td:nth-child(3),
+  .sessions td:nth-child(4) {
+    @apply whitespace-nowrap tabular-nums;
+  }
+  .votes thead th + th,
+  .votes td {
+    @apply px-2 text-center whitespace-nowrap;
+  }
+  .votes .jn {
+    @apply text-[11px];
+  }
+  .votes td.ok,
+  .votes td.bad,
+  .votes td.maj {
+    @apply font-semibold;
+  }
+  td.ok {
+    @apply text-emerald-700 dark:text-emerald-400;
+  }
+  td.bad {
+    @apply text-rose-700 dark:text-rose-400;
+  }
+  .votes td.maj {
+    @apply bg-zinc-50 dark:bg-zinc-800/50;
+  }
+  .jn {
+    @apply font-mono text-xs font-medium text-zinc-700 dark:text-zinc-300;
+  }
+  code {
+    @apply font-mono text-xs wrap-anywhere;
+  }
+  code.copy {
+    @apply cursor-pointer rounded-md bg-zinc-100 px-1.5 py-0.5 text-zinc-700 transition-colors hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700;
+  }
+  code.copy.copied {
+    @apply bg-emerald-100 text-emerald-900 dark:bg-emerald-400/20 dark:text-emerald-200;
+  }
+  pre {
+    @apply mt-2 max-h-96 overflow-auto rounded-xl bg-zinc-50 p-3 font-mono text-xs whitespace-pre-wrap dark:bg-zinc-950;
+  }
+  details {
+    @apply my-2;
+  }
+  .card summary {
+    @apply flex cursor-pointer list-none items-center gap-2 rounded-md py-1 font-mono text-sm wrap-anywhere text-zinc-700 marker:hidden before:size-1.5 before:shrink-0 before:-rotate-45 before:border-r-[1.5px] before:border-b-[1.5px] before:border-current before:transition-transform before:content-[''] motion-reduce:before:transition-none dark:text-zinc-300 [&::-webkit-details-marker]:hidden;
+  }
+  .card details[open] > summary {
+    @apply before:rotate-45;
+  }
+  .card > details:first-child > summary {
+    @apply font-sans text-base font-semibold text-zinc-900 dark:text-zinc-100;
+  }
+  .card > details {
+    @apply my-0;
+  }
+  details::details-content {
+    @apply overflow-hidden;
+    block-size: 0;
+    transition:
+      block-size 0.3s ease,
+      content-visibility 0.3s allow-discrete;
+  }
+  details[open]::details-content {
+    block-size: auto;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    details::details-content {
+      transition: none;
+    }
+  }
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--c) 60%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 10px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+@keyframes blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes ring-fill {
+  from {
+    stroke-dasharray: 0 100;
+  }
+}
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8) rotate(20deg);
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dot.pulse {
+    animation: none;
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--c) 35%, transparent);
+  }
+}

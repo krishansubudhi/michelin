@@ -1,0 +1,117 @@
+/* The report's timeline (Setup, each CUJ, Teardown, Judges): imported by report.css, compiled by `npm run css`. */
+@layer components {
+  /* Timeline */
+  .timeline {
+    @apply relative my-8 pl-9;
+  }
+  .timeline::before {
+    @apply absolute top-4 bottom-4 left-[0.8rem] w-0.5 rounded-full bg-zinc-200 content-[''] dark:bg-zinc-800;
+  }
+  .node {
+    --c: var(--na);
+    @apply relative mb-3 wrap-anywhere transition-shadow hover:shadow-md;
+  }
+  .node.ok {
+    --c: var(--ok);
+  }
+  .node.failed,
+  .node.errored {
+    --c: var(--bad);
+    @apply ring-rose-300 dark:ring-rose-400/40;
+  }
+  .node.running {
+    --c: var(--run);
+    @apply ring-sky-300 dark:ring-sky-400/40;
+  }
+  .node > .head,
+  .node summary {
+    @apply flex flex-wrap items-center gap-x-2 gap-y-1 p-3.5 sm:p-4 sm:px-5;
+  }
+  .node summary {
+    @apply relative cursor-pointer list-none rounded-2xl pr-11 select-none [&::-webkit-details-marker]:hidden;
+  }
+  .node summary::after {
+    @apply absolute top-5 right-4 size-2.5 rotate-45 border-r-2 border-b-2 border-zinc-400 transition-transform duration-300 content-[''] motion-reduce:transition-none;
+  }
+  .node details[open] > summary::after {
+    @apply top-6 -rotate-135;
+  }
+  .dot {
+    @apply absolute top-4 -left-[2.05rem] grid size-6 place-items-center rounded-full text-xs leading-none font-bold text-white outline-4 outline-zinc-50 dark:text-zinc-950 dark:outline-zinc-950;
+    background: var(--c);
+  }
+  .node.ok .dot::after {
+    content: "✓";
+  }
+  .node.failed .dot::after {
+    content: "✕";
+  }
+  .node.errored .dot::after {
+    content: "!";
+  }
+  .node.skipped .dot::after {
+    content: "–";
+  }
+  .dot.hollow {
+    @apply bg-zinc-50 ring-2 ring-zinc-300 ring-inset dark:bg-zinc-950 dark:ring-zinc-600;
+  }
+  .node.running .dot::after {
+    @apply size-2 rounded-full bg-white content-[''] dark:bg-zinc-950;
+  }
+  .dot.pulse {
+    animation: pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  .nt {
+    @apply font-semibold tracking-tight;
+  }
+  .meta {
+    @apply basis-full text-xs text-zinc-500 tabular-nums dark:text-zinc-400;
+  }
+  .nb {
+    @apply mx-3.5 border-t border-zinc-100 pt-1 pb-4 sm:mx-5 dark:border-zinc-800;
+  }
+  details[open] > .nb {
+    animation: rise 0.3s ease-out;
+    @apply motion-reduce:animate-none;
+  }
+  .nb ul,
+  .nb ol {
+    @apply my-2 list-disc space-y-1 pl-5 marker:text-zinc-400;
+  }
+  .nb p {
+    @apply my-2;
+  }
+  ol.steps {
+    @apply list-decimal space-y-3;
+  }
+  .in {
+    @apply text-zinc-600 dark:text-zinc-400;
+  }
+  .got {
+    @apply mt-1 rounded-lg bg-zinc-50 px-2.5 py-1.5 font-mono text-xs whitespace-pre-wrap text-zinc-700 dark:bg-zinc-950 dark:text-zinc-300;
+  }
+  .lat {
+    @apply mt-1 flex items-center gap-2 text-xs text-zinc-500 tabular-nums dark:text-zinc-400;
+  }
+  .lat i {
+    @apply block h-1.5 max-w-[70%] min-w-0.5 rounded-full bg-zinc-300 dark:bg-zinc-600;
+  }
+  .reply {
+    @apply rounded-xl bg-zinc-50 p-3 text-sm dark:bg-zinc-950;
+  }
+  blockquote {
+    @apply my-3 border-l-2 border-zinc-300 pl-3 text-zinc-700 italic dark:border-zinc-700 dark:text-zinc-300;
+  }
+  .cid {
+    @apply font-mono text-[0.92em];
+  }
+  a.cid {
+    @apply underline decoration-zinc-300 underline-offset-2 hover:decoration-current dark:decoration-zinc-600;
+  }
+  .why ul {
+    @apply mt-1 ml-4 list-disc space-y-1;
+  }
+  ol.why {
+    @apply space-y-2;
+  }
+}

@@ -1,0 +1,42 @@
+#!/bin/sh
+# Pre-commit: lint and unit-test exactly what is staged.
+# Unstaged and untracked changes are stashed for the duration and restored on exit, so they can't
+# hide a broken commit. Integration tests (real claude -p, minutes, costs money) run only on request:
+#   RUN_INTEGRATION=1 git commit ...
+# A claude -p review of the staged diff runs last; skip it only with SKIP_REVIEW=1 git commit ...
+set -e
+before=$(git rev-parse -q --verify refs/stash || true)
+git stash push --keep-index --include-untracked --quiet -m "pre-commit: unstaged changes"
+after=$(git rev-parse -q --verify refs/stash || true)
+if [ "$before" != "$after" ]; then
+  # Back to HEAD, then reapply the stash with its index: staged and unstaged changes return exactly.
+  trap 'git reset --hard --quiet && git stash pop --index --quiet' EXIT
+  trap 'exit 1' INT TERM
+fi
+echo "pre-commit: npm run lint"
+npm run --silent lint
+echo "pre-commit: unit tests"
+npm test --silent
+if [ -n "$RUN_INTEGRATION" ]; then
+  echo "pre-commit: integration tests (real claude -p, a few minutes)"
+  npm run --silent test:integration
+fi
+if [ -n "$SKIP_REVIEW" ]; then
+  echo "pre-commit: review skipped (SKIP_REVIEW set)"
+elif command -v claude >/dev/null 2>&1; then
+  echo "pre-commit: claude review"
+  review=$(git diff --cached | claude -p --model sonnet 'Review this staged git diff for real mistakes only: bugs, broken logic, data loss, leaked secrets, or a broken test or command. Ignore style, wording, formatting and doc conventions (CLAUDE.md style rules included); those never fail. Reply with ONLY one JSON object, no prose, no fence: {"result":"pass"|"fail","reason":"<one or two sentences>"}' 2>/dev/null || true)
+  result=$(printf '%s' "$review" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const j=JSON.parse(s.slice(s.indexOf("{"),s.lastIndexOf("}")+1));console.log(j.result+"\t"+(j.reason||""))}catch{console.log("error\tunparseable review: "+s.slice(0,200))}})')
+  verdict=${result%%"	"*}
+  reason=${result#*"	"}
+  if [ "$verdict" = "pass" ]; then
+    echo "pre-commit: review pass: $reason"
+  elif [ "$verdict" = "error" ]; then
+    echo "pre-commit: *** REVIEW SKIPPED: claude gave no usable verdict ($reason) ***" >&2
+  else
+    echo "pre-commit: review $verdict: $reason" >&2
+    exit 1
+  fi
+else
+  echo "pre-commit: claude not found, review skipped"
+fi

@@ -1,0 +1,37 @@
+{
+  "name": "michelin",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "type": "module",
+  "prettier": {
+    "printWidth": 120
+  },
+  "bin": {
+    "michelin": "src/run/runner.ts"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts",
+    "test:integration": "node --test test/integration/integration.test.ts",
+    "lint": "tsc --noEmit && eslint . && prettier --ignore-path .gitignore --ignore-path prettierignore --check .",
+    "format": "prettier --ignore-path .gitignore --ignore-path prettierignore --write .",
+    "css": "node scripts/build-css.ts",
+    "prepare": "git config core.hooksPath hooks"
+  },
+  "dependencies": {
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/cli": "^0.1.24",
+    "@tailwindcss/cli": "^4.3.5",
+    "@types/node": "^26.6.6",
+    "eslint": "^10.14.0",
+    "prettier": "^3.9.10",
+    "tailwindcss": "^4.3.5",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.1"
+  }
+}

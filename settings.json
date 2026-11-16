@@ -1,0 +1,10 @@
+{
+  "constructor": { "model": "claude-haiku-5-5", "effort": "low" },
+  "executor": { "model": "claude-sonnet-5-5", "effort": "medium" },
+  "destructor": { "model": "claude-haiku-5-5", "effort": "low" },
+  "judge": [
+    { "model": "claude-opus-5-5", "effort": "high" },
+    { "model": "claude-sonnet-5-5", "effort": "high" },
+    { "model": "claude-fable-5-2", "effort": "high" }
+  ]
+}

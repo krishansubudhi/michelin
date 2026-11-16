@@ -1,0 +1,8 @@
+instruction: |
+  Ask "What is my country?"
+timeout_s: 60
+expectations:
+  - |
+    The reply says USA.
+  - |
+    The reply came within 10 seconds.

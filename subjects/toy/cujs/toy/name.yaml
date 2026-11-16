@@ -1,0 +1,7 @@
+# Must-fail control: the toy always answers USA, so the judges must fail this one.
+instruction: |
+  Ask "What is my name?"
+timeout_s: 60
+expectations:
+  - |
+    The reply says Alice.
