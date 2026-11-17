@@ -2,7 +2,7 @@
 // The run itself is tested with a fake LLM that records every call and replies from a script.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readdirSync, readFileSync, mkdtempSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -17,6 +17,7 @@ import {
 import { NO_CUJS } from "../src/run/cli.ts";
 import { exitCode } from "../src/run/summary.ts";
 import { loadCuj, type Cuj } from "../src/run/cujs.ts";
+import type { Judging } from "../src/llm/judge.ts";
 
 const SUBJECTS = ["subjects", "test/fixtures/subjects"];
 const tmp = (p: string) => mkdtempSync(join(tmpdir(), p));
@@ -353,4 +354,23 @@ test("teardown and the judges of every CUJ run in parallel, each saved as it lan
     readFileSync(join(ctx.dir, "llm.log"), "utf8"),
     /role chat-one\/judges[\s\S]*role destructor|role destructor[\s\S]*role chat-one\/judges/,
   );
+});
+
+test("judging: the first judge alone by default; a baseline flip or judging.all brings in the rest", async () => {
+  const twoJudges = { ...settings, judge: [pick("J"), pick("K")] };
+  const judged = async (judging: Judging) => {
+    const { ctx, calls } = fake((m) => (m === "J" || m === "K" ? PASS : happy(m)));
+    await runSubject({ ...ctx, settings: { ...twoJudges, judging } }, "subj", [two[0]]);
+    return calls
+      .map((c) => c[0])
+      .filter((m) => m === "J" || m === "K")
+      .sort();
+  };
+  assert.deepEqual(await judged({}), ["J"]);
+  assert.deepEqual(await judged({ all: true }), ["J", "K"]);
+  const base = tmp("base-");
+  mkdirSync(join(base, "chat-one"));
+  const prior = [{ expectation: "SECRET-one", votes: {}, pass: false }];
+  writeFileSync(join(base, "chat-one", "verdict.json"), JSON.stringify(prior));
+  assert.deepEqual(await judged({ baselines: [base] }), ["J", "K"]);
 });

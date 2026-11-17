@@ -5,7 +5,7 @@
 //   constructor  runs <subject>/setup.md         (one entry)
 //   executor     drives the subject through CUJs (one entry)
 //   destructor   runs <subject>/teardown.md      (one entry)
-//   judge        scores the journeys             (list of entries, majority vote)
+//   judge        scores the journeys             (list of entries: the first alone, all + majority vote on a fail)
 //
 // loadSettings throws if a role is missing or an entry is mistyped, naming the file it came from,
 // so a typo fails at start instead of mid-run.
@@ -14,6 +14,7 @@
 
 import { readFileSync } from "node:fs";
 import { EFFORTS, type Pick } from "../llm/models.ts";
+import type { Judging } from "../llm/judge.ts";
 
 /** Which model plays each role in a run. */
 export type Settings = {
@@ -23,8 +24,10 @@ export type Settings = {
   executor: Pick;
   /** Runs <subject>/teardown.md. */
   destructor: Pick;
-  /** Score the journeys; their majority vote wins. */
+  /** Score the journeys: the first alone; on its fail, error or baseline flip, all of them and the majority wins. */
   judge: Pick[];
+  /** How the judges are used this run, from the command line, never the file; recorded in run.json. */
+  judging?: Judging;
 };
 
 /** True if `p` is {model: string, effort: one of EFFORTS} and nothing else. */
@@ -78,12 +81,13 @@ function checkFields(s: unknown, path: string): void {
 /**
  * Read and check the settings file.
  *
- * @param path Settings file to read. Default "settings.json" in the current folder.
- * @returns    The settings, with every role checked (any model id is accepted).
+ * @param path    Settings file to read. Default "settings.json" in the current folder.
+ * @param judging How the judges are used, from the command line, e.g. {all: false, baselines: []}; omitted: not added.
+ * @returns       The settings, with every role checked (any model id is accepted), plus judging if given.
  * @throws     If the file isn't valid JSON, or a role is missing or mistyped; the error names the file.
  */
-export function loadSettings(path = "settings.json"): Settings {
+export function loadSettings(path = "settings.json", judging?: Judging): Settings {
   const s = readJson(path);
   checkFields(s, path);
-  return s as Settings;
+  return judging ? { ...(s as Settings), judging } : (s as Settings);
 }

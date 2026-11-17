@@ -5,11 +5,14 @@
 import { parseArgs } from "node:util";
 
 /** Printed by --help, and as the error when no subject or no CUJ is given. */
-export const USAGE = `usage: node src/run/runner.ts [--settings file] <subject> <cuj> [cuj ...]
+export const USAGE = `usage: node src/run/runner.ts [--settings file] [--all-judges] [--baseline dir ...] <subject> <cuj> [cuj ...]
   <subject>        folder with setup.md, howtorun.md and teardown.md, e.g. subjects/toy
   <cuj> ...        one or more CUJ yaml files or folders (required), e.g. subjects/toy/cujs/toy/country.yaml or subjects/toy/cujs/toy/;
                    a folder runs every *.yaml directly in it, sorted, each on a fresh start (its own setup/teardown)
   --settings file  models per role (default settings.json)
+  --all-judges     every judge in settings scores every CUJ (default: the first judge alone, the rest only when it
+                   fails an expectation, gives no valid result, or differs from --baseline; then the majority wins)
+  --baseline dir   an earlier run folder whose <cuj-id>/verdict.json is the baseline verdict (repeatable, first match wins)
   -h, --help       show this help
 A subject, CUJ or settings path that does not exist as given is looked up under each folder in MICHELIN_SUBJECTS
 (colon-separated), e.g. MICHELIN_SUBJECTS=~/my-subjects michelin my-app my-app/cujs/smoke/`;
@@ -23,7 +26,8 @@ export class UsageError extends Error {}
  *
  * @param argv The arguments after `node src/run/runner.ts`, i.e. process.argv.slice(2).
  * @returns    null if --help / -h was given; otherwise subject (folder holding setup.md, howtorun.md, teardown.md),
- *             picked (CUJ files to run, at least one) and settingsPath (undefined unless --settings is given).
+ *             picked (CUJ files to run, at least one), settingsPath (undefined unless --settings is given),
+ *             judging: all (true with --all-judges) and baselines (the --baseline folders in order, [] if none).
  * @throws     On an unknown flag; a UsageError (exit 2) when no subject or no CUJ (NO_CUJS) is given.
  */
 export function parseCli(argv: string[]) {
@@ -32,6 +36,8 @@ export function parseCli(argv: string[]) {
     allowPositionals: true,
     options: {
       settings: { type: "string" },
+      "all-judges": { type: "boolean" },
+      baseline: { type: "string", multiple: true },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -39,5 +45,10 @@ export function parseCli(argv: string[]) {
   const [subject, ...picked] = positionals;
   if (!subject) throw new UsageError("no subject given");
   if (!picked.length) throw new UsageError(NO_CUJS);
-  return { subject, picked, settingsPath: values.settings };
+  return {
+    subject,
+    picked,
+    settingsPath: values.settings,
+    judging: { all: values["all-judges"] ?? false, baselines: values.baseline ?? [] },
+  };
 }

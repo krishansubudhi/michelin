@@ -10,7 +10,7 @@
 //   a. constructor LLM reads <subject>/setup.md, runs it, seeds the CUJs' given (once; Setup, schemas.ts; given.ts)
 //   b. executor LLM gets howtorun.md + one CUJ instruction       (per CUJ, killed at timeout_s; ExecutorResult; runs in a fresh temp folder, told where the repo is so howtorun's relative paths resolve)
 //   c. destructor LLM reads <subject>/teardown.md and cleans up  (once, always; Teardown)
-//   d. each judge LLM in settings.judge scores each CUJ that ran (judge.ts, majority vote; JudgeResult), in parallel with c
+//   d. settings.judge scores each CUJ that ran, in parallel with c (judge.ts: first judge, all + majority on a fail or flip)
 // Every role returns typed JSON (claude --json-schema), validated on arrival; an invalid result is an error. A failed setup skips every CUJ (no executor, no judge), still destructs, and exits 1.
 //
 // CUJ files are found and checked in cujs.ts. The runner itself has no LLM. Only the judges see a CUJ's expectations; they run alongside teardown, reading saved outputs, never the subject. Models come from settings.json via settings.ts.
@@ -294,7 +294,7 @@ export async function runSubject(ctx: Ctx, subject: string, cujs: (readonly [str
   const judge = async (path: string, cuj: Cuj) => {
     const id = cujId(path);
     appendFileSync(join(ctx.dir, "llm.log"), `${new Date().toISOString()} role ${id}/judges\n`);
-    const { score, sessions, error } = await judgeCuj(ctx.llm, ctx.settings.judge, join(ctx.dir, id), cuj);
+    const { score, sessions, error } = await judgeCuj(ctx.llm, ctx.settings, join(ctx.dir, id), cuj);
     run.scores[id] = score;
     if (error) run.cujs[id] = `error: ${error}`;
     for (const [k, s] of Object.entries(sessions)) {
@@ -372,7 +372,7 @@ async function main() {
   const args = parseCli(process.argv.slice(2));
   if (!args) return console.log(USAGE);
   const [subject, ...picked] = [args.subject, ...args.picked].map((p) => resolveArg(p)); // or under MICHELIN_SUBJECTS
-  const settings = loadSettings(args.settingsPath ? resolveArg(args.settingsPath) : "settings.json");
+  const settings = loadSettings(args.settingsPath ? resolveArg(args.settingsPath) : "settings.json", args.judging);
   const files = expandCujs(picked);
   checkUniqueIds(files);
   const groups = runGroups(

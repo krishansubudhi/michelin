@@ -63,3 +63,12 @@ test("bad JSON and a missing file throw", () => {
   assert.throws(() => loadSettings(file("bad.json", "{not json")), SyntaxError);
   assert.throws(() => loadSettings(join(dir, "nope.json")), /ENOENT/);
 });
+
+test("judging from the command line rides along on the settings; without it nothing is added", () => {
+  const p = file("judging.json", JSON.stringify(good));
+  assert.deepEqual(loadSettings(p, { all: true, baselines: ["r1"] }), {
+    ...good,
+    judging: { all: true, baselines: ["r1"] },
+  });
+  assert.ok(!("judging" in loadSettings(p)));
+});

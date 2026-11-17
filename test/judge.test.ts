@@ -3,10 +3,10 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { judgePrompt, checkJudge, tally, judgeCuj } from "../src/llm/judge.ts";
+import { judgePrompt, checkJudge, tally, judgeCuj, escalate, readBaseline } from "../src/llm/judge.ts";
 import { JUDGE, type Vote } from "../src/llm/schemas.ts";
 
 const yes: Vote = { pass: true, why: "a" };
@@ -68,7 +68,7 @@ test("tally: majority of usable votes; a tie fails; no usable votes is null", ()
   assert.equal(tally(["e"], { A: null }).at(0)?.pass, null);
 });
 
-test("judgeCuj runs every judge on executor.json, writes their checked results, verdict.json and sessions", async () => {
+test("judgeCuj with all runs every judge on executor.json, writes their checked results, verdict.json and sessions", async () => {
   const out = mkdtempSync(join(tmpdir(), "judge-"));
   writeFileSync(
     join(out, "executor.json"),
@@ -85,7 +85,7 @@ test("judgeCuj runs every judge on executor.json, writes their checked results, 
   };
   const { score, sessions } = await judgeCuj(
     llm,
-    ["A", "B", "C"].map((model) => ({ model, effort: "high" as const })),
+    { judge: ["A", "B", "C"].map((model) => ({ model, effort: "high" as const })), judging: { all: true } },
     out,
     { expectations: ["Says USA.", "Fast."] },
   );
@@ -103,7 +103,7 @@ test("judgeCuj runs every judge on executor.json, writes their checked results, 
 
 test("judgeCuj with no valid judge result is unjudged; a missing executor.json is fine", async () => {
   const out = mkdtempSync(join(tmpdir(), "judge-"));
-  const { score } = await judgeCuj(async () => res(null), [{ model: "A", effort: "high" }], out, {
+  const { score } = await judgeCuj(async () => res(null), { judge: [{ model: "A", effort: "high" }] }, out, {
     expectations: ["x"],
   });
   assert.equal(score, "unjudged");
@@ -114,7 +114,7 @@ test("judges run with no tools in a scratch folder, and their cost is recorded",
   let seen: unknown;
   const { sessions } = await judgeCuj(
     async (_p, _q, o) => ((seen = o), res(verdicts(true))),
-    [{ model: "A", effort: "high" }],
+    { judge: [{ model: "A", effort: "high" }] },
     out,
     { expectations: ["x"] },
   );
@@ -126,11 +126,90 @@ test("a garbled executor.json errors the CUJ without calling a judge", async () 
   const out = mkdtempSync(join(tmpdir(), "judge-"));
   writeFileSync(join(out, "executor.json"), "{not json");
   let called = false;
-  const r = await judgeCuj(async () => ((called = true), res(verdicts(true))), [{ model: "A", effort: "high" }], out, {
-    expectations: ["x"],
-  });
+  const r = await judgeCuj(
+    async () => ((called = true), res(verdicts(true))),
+    { judge: [{ model: "A", effort: "high" }] },
+    out,
+    {
+      expectations: ["x"],
+    },
+  );
   assert.equal(called, false);
   assert.equal(r.score, "unjudged");
   assert.match(r.error ?? "", /executor\.json is not valid JSON/);
   assert.deepEqual(r.sessions, {});
+});
+
+test("escalate: on a missing result, any fail, or a flip from a known baseline verdict", () => {
+  assert.equal(escalate(null), true);
+  assert.equal(escalate([yes, yes]), false);
+  assert.equal(escalate([yes, no]), true);
+  assert.equal(escalate([yes, yes], [true, null]), false, "null baseline: nothing to differ from");
+  assert.equal(escalate([yes, yes], [true, false]), true, "passes what the baseline failed");
+});
+
+/** A CUJ run folder holding a one-step executor.json. */
+const runFolder = () => {
+  const out = mkdtempSync(join(tmpdir(), "judge-"));
+  const data = { steps: [{ action: "run", input: "q", got: "a", ms: 1 }], reply: "r" };
+  writeFileSync(join(out, "executor.json"), JSON.stringify({ ok: true, data }));
+  return out;
+};
+const ABC = { judge: ["A", "B", "C"].map((model) => ({ model, effort: "high" as const })) };
+
+test("judgeCuj: a passing first judge scores alone; the others never run", async () => {
+  const out = runFolder();
+  const seen: string[] = [];
+  const llm = async ({ model: m }: { model: string }) => (seen.push(m), res(verdicts(true, true)));
+  const { score, sessions } = await judgeCuj(llm, ABC, out, { expectations: ["e1", "e2"] });
+  assert.equal(score, "passed 2/2");
+  assert.deepEqual(seen, ["A"]);
+  assert.deepEqual(Object.keys(sessions), ["judge-A-high"]);
+  assert.ok(!existsSync(join(out, "judge-B-high.json")));
+  assert.deepEqual(Object.keys(JSON.parse(readFileSync(join(out, "verdict.json"), "utf8"))[0].votes), ["A-high"]);
+});
+
+test("judgeCuj: a failing first judge brings in the others, and the majority overrules it", async () => {
+  const out = runFolder();
+  const seen: string[] = [];
+  const llm = async ({ model: m }: { model: string }) => (seen.push(m), res(verdicts(true, m !== "A")));
+  const { score, sessions } = await judgeCuj(llm, ABC, out, { expectations: ["e1", "e2"] });
+  assert.equal(score, "passed 2/2", "B and C pass e2, A alone fails it");
+  assert.deepEqual(seen, ["A", "B", "C"], "A first, then the other two");
+  assert.deepEqual(Object.keys(sessions).sort(), ["judge-A-high", "judge-B-high", "judge-C-high"]);
+});
+
+test("judgeCuj: a first judge that differs from the baseline escalates even when it passes", async () => {
+  const seen: string[] = [];
+  const llm = async ({ model: m }: { model: string }) => (seen.push(m), res(verdicts(true)));
+  /** Judge a fresh c1 folder whose baseline verdict for its one expectation was `prior`. */
+  const judgedWith = async (prior: boolean) => {
+    const runs = mkdtempSync(join(tmpdir(), "judge-")),
+      base = mkdtempSync(join(tmpdir(), "base-"));
+    mkdirSync(join(base, "c1"));
+    writeFileSync(join(base, "c1", "verdict.json"), JSON.stringify([{ expectation: "e1", votes: {}, pass: prior }]));
+    mkdirSync(join(runs, "c1"));
+    writeFileSync(join(runs, "c1", "executor.json"), readFileSync(join(runFolder(), "executor.json")));
+    seen.length = 0;
+    await judgeCuj(llm, { ...ABC, judging: { baselines: [base] } }, join(runs, "c1"), { expectations: ["e1"] });
+    return [...seen];
+  };
+  assert.deepEqual(await judgedWith(false), ["A", "B", "C"]);
+  assert.deepEqual(await judgedWith(true), ["A"]);
+});
+
+test("readBaseline: the first folder with <id>/verdict.json, matched by expectation text", () => {
+  const empty = mkdtempSync(join(tmpdir(), "base-"));
+  const base = mkdtempSync(join(tmpdir(), "base-"));
+  mkdirSync(join(base, "c1"));
+  const prior = [
+    { expectation: "Says USA.\n", votes: {}, pass: true },
+    { expectation: "Fast.", votes: {}, pass: false },
+  ];
+  writeFileSync(join(base, "c1", "verdict.json"), JSON.stringify(prior));
+  assert.deepEqual(readBaseline([empty, base], "c1", ["Fast.", "Says USA.", "New one."]), [false, true, null]);
+  assert.equal(readBaseline([empty, base], "c2", ["x"]), undefined);
+  mkdirSync(join(empty, "c1"));
+  writeFileSync(join(empty, "c1", "verdict.json"), "{not json");
+  assert.deepEqual(readBaseline([empty, base], "c1", ["Fast."]), [false], "an unreadable one is skipped");
 });
