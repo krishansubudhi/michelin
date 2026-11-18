@@ -48,7 +48,7 @@ total: 1/2 CUJs passed
 
 The control failing is the healthy outcome. Details: [RESULTS.md](subjects/opencode/RESULTS.md).
 
-**Blind compare vs real tests.** On 5 SWE-bench Lite tasks, a judge that saw only the issue and each diff, never the test output, preferred Qwen 3.8 27B over Gemma 4 26B on all 5; the hidden tests, run afterwards, agree on 4 of 4 decidable tasks, but only 1 task had edits from both models. Not a model ranking: see the limits in [RESULTS.md](subjects/opencode/RESULTS.md#swe-bench-lite-gemma-4-26b-vs-qwen-38-27b-judged-blind-to-the-tests-2026-11-18).
+**Blind compare vs real tests.** On 5 SWE-bench Lite tasks, a judge that saw only the issue and each diff, never the test output, preferred Qwen 3.8 27B over Gemma 4 26B on every task with a winner. The hidden tests, run afterwards, agree wherever they can decide, but across two runs only 3 tasks had edits from both models, and the tests decide only 1 of those (agree, 1 of 1). Not a model ranking: see the before/after and limits in [RESULTS.md](subjects/opencode/RESULTS.md#swe-bench-lite-gemma-4-26b-vs-qwen-38-27b-judged-blind-to-the-tests-2026-11-18).
 
 ## Docs
 
