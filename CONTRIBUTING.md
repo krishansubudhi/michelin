@@ -3,7 +3,8 @@
 Needs Node 22.18+ (runs `.ts` directly, no build step), `python3`, and the [`claude` CLI](https://docs.anthropic.com/en/docs/claude-code) logged in. Live runs make real model calls.
 
 ```sh
-npm install        # one runtime dependency (yaml), plus the lint tools; also turns on the pre-commit hook
+npm install        # one runtime dependency (yaml), plus the lint tools
+git config core.hooksPath hooks   # turn on the pre-commit hook
 npm test           # unit tests: no LLM, about 1 s
 npm run lint       # tsc + eslint + prettier
 node src/run/runner.ts subjects/toy subjects/toy/cujs/toy/

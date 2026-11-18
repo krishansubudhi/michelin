@@ -50,7 +50,7 @@ export function init(cwd: string, pkgRoot: string): string[] {
   const lines = [
     unlessExists(config, "wrote michelin.json", () => writeFileSync(config, starter(), { flag: "wx" })),
     unlessExists(toy, "copied subjects/toy", () => cpSync(join(pkgRoot, "subjects", "toy"), toy, { recursive: true })),
-    "next: npx michelin-eval run",
+    "next: michelin run",
   ];
   for (const l of lines) console.log(l);
   return lines;

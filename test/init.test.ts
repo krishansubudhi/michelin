@@ -12,7 +12,7 @@ const tmp = () => mkdtempSync(join(tmpdir(), "init-"));
 
 test("init writes michelin.json and copies the toy subject; the file resolves to the toy subject", () => {
   const cwd = tmp();
-  assert.deepEqual(init(cwd, PKG_ROOT), ["wrote michelin.json", "copied subjects/toy", "next: npx michelin-eval run"]);
+  assert.deepEqual(init(cwd, PKG_ROOT), ["wrote michelin.json", "copied subjects/toy", "next: michelin run"]);
   for (const f of ["setup.md", "howtorun.md", "teardown.md", "toy.py", "cujs/toy/country.yaml"])
     assert.ok(existsSync(join(cwd, "subjects/toy", f)), `subjects/toy/${f} missing`);
   const c = loadConfig({ flags: {}, cwd });

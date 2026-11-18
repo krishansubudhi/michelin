@@ -36,8 +36,7 @@
     "test:integration": "node --test test/integration/integration.test.ts",
     "lint": "tsc --noEmit && eslint . && prettier --ignore-path .gitignore --ignore-path prettierignore --check .",
     "format": "prettier --ignore-path .gitignore --ignore-path prettierignore --write .",
-    "css": "node scripts/build-css.ts",
-    "prepare": "git config core.hooksPath hooks"
+    "css": "node scripts/build-css.ts"
   },
   "dependencies": {
     "yaml": "^2.9.1"

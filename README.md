@@ -1,25 +1,38 @@
-**Eval harness for AI agents: describe user journeys in plain words, LLM judges score the evidence.**
+# Michelin
+
+**Michelin evaluates a whole agent system on real user journeys: you write what a user does and what should be true afterwards, an LLM drives your agent through it, and blind LLM judges score the recorded evidence.**
 
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![node >=22.18](https://img.shields.io/badge/node-%3E%3D22.18-brightgreen)](https://nodejs.org)
 
 ![A Michelin report: pass rate, cost, and each step of one OpenCode run](docs/report.png)
 
-## Why
+## Why it is different
 
-- **Journeys, not unit asserts.** A CUJ is a few lines of yaml: what a user does and what should be true afterwards. An LLM sets your agent up, drives it, and tears it down.
-- **Judges see evidence, not vibes.** Judges score each expectation from the recorded steps alone; extra judges join and vote when the first one fails or flips.
-- **Any metric you care about.** A subject's how-to-run can name any metric (cost, tokens, steps) for the executor to record; `michelin compare` shows them as columns beside wall time, and judges never see them.
-- **Trust checks built in.** Every suite ships a must-fail control. If it ever passes, the judges are rubber-stamping.
+- **Whole systems, real journeys.** A CUJ (critical user journey) is a few lines of yaml: what a user does and what should be true afterwards. Your agent runs as it really runs (CLI, server, chat app); an LLM sets it up, drives it, and tears it down. No harness code inside your agent.
+- **Must-fail controls.** Every suite ships a CUJ whose expectations are deliberately wrong. If it ever passes, the judges are rubber-stamping and the run can't be trusted.
+- **Blind judges.** Judges score each expectation from the recorded evidence alone, never the subject itself. `michelin compare` goes further: it replaces run ids, subject names and model names before judges pick the better of two runs, in both orders.
+- **Any metric you care about.** A subject can name metrics (cost, tokens, steps) for the executor to record; `michelin compare` tables them beside wall time, and judges never see them.
 
 ## Quickstart
 
-Needs Node 22.18+ and the [`claude` CLI](https://docs.anthropic.com/en/docs/claude-code), logged in. Runs make real model calls.
+Needs Node 22.18+, `git`, `python3` (for the toy subject) and the [`claude` CLI](https://docs.anthropic.com/en/docs/claude-code), logged in. Every role is a `claude -p` call, so runs use your Claude plan or API credit; this quickstart cost about $0.12.
 
 ```sh
-npx michelin-eval init && npx michelin-eval run
+npm install -g github:krishansubudhi/michelin   # installs the `michelin` command
+mkdir my-evals && cd my-evals
+michelin init                                   # writes michelin.json and copies the toy subject
+michelin run --judges claude-haiku-5-5          # cheapest judge; drop the flag for the default Opus panel
 ```
 
-`init` writes `michelin.json` and a sample subject; `run` sets it up, runs its CUJs, and leaves `.runs/<runid>/report.html`. Flags `--model`, `--judges` and `--runs` override `michelin.json`, which overrides the built-in defaults.
+Expected ending (about a minute):
+
+```
+PASS  toy-country  passed 2/2  (done)
+FAIL  toy-name     passed 0/1  (done)
+total: 1/2 CUJs passed
+```
+
+`toy-name` is the must-fail control: the toy always answers "USA", so a healthy judge fails "The reply says Alice". Each CUJ leaves `.runs/<runid>/report.html`. Flags `--model`, `--judges` and `--runs` override `michelin.json`, which overrides the built-in defaults.
 
 ## A real result: OpenCode
 

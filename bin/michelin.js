@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The `michelin` command as npm installs it (npx michelin-eval run ...). Node refuses to strip TypeScript types for
+// The `michelin` command as npm installs it (npm install -g github:krishansubudhi/michelin). Node refuses to strip TypeScript types for
 // files under node_modules (ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING), so this plain-JS entry registers a load hook
 // that strips this package's src/*.ts itself (module.stripTypeScriptTypes, its ExperimentalWarning muted), then runs
 // the runner's cli().
