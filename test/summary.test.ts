@@ -28,3 +28,25 @@ test("summary: a line per CUJ across runs, PASS only when every expectation pass
     ].join("\n"),
   );
 });
+
+test("summary: --runs n keeps every run of a CUJ, which passes only when every run did", () => {
+  const def = { path: "a.yaml", instruction: "", timeout_s: 1 };
+  const run = (a: string, b: string) => ({
+    defs: { a: def, b: def },
+    cujs: { a: "done", b: "done" },
+    scores: { a, b },
+  });
+  const s = summary([
+    run("passed 2/2", "passed 1/1"),
+    run("passed 1/2", "passed 1/1"),
+    run("passed 2/2", "passed 1/1"),
+  ]);
+  assert.equal(
+    s,
+    [
+      "FAIL  a  2/3 runs passed: passed 2/2 (done), passed 1/2 (done), passed 2/2 (done)",
+      "PASS  b  3/3 runs passed: passed 1/1 (done), passed 1/1 (done), passed 1/1 (done)",
+      "total: 1/2 CUJs passed (5/6 runs)",
+    ].join("\n"),
+  );
+});

@@ -4,11 +4,13 @@
 //
 // loadRun() walks the folder and builds a typed RunView from its *.json files;
 // renderReport() (render.ts) is pure and turns that view into HTML; writeReport() wires them and never throws.
-// Raw text only appears in collapsible debug blocks; files it doesn't know are listed too.
+// Raw text only appears in collapsible debug blocks; files it doesn't know are listed too: images as <img>, other
+// binary files by name and size, never as text.
 // Test: npm test (report.test.ts, no LLM).
 
 import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { join, sep } from "node:path";
+import { join, resolve, sep } from "node:path";
+import { pathToFileURL } from "node:url";
 import type { Session } from "../llm/models.ts";
 import type { Checked, Setup, Teardown, ExecutorResult, JudgeResult } from "../llm/schemas.ts";
 import { esc } from "./html.ts";
@@ -28,6 +30,29 @@ const tryJson = (text: string): Loose => {
     return null;
   }
 };
+
+/** File names shown as an image in the report, e.g. "shot.png". */
+const IMAGE = /\.(png|jpe?g|gif|webp|avif|bmp|svg)$/i;
+
+/**
+ * Whether file contents are binary: a NUL byte in the first 8 KB, as git decides. Pure.
+ *
+ * @param buf The file's bytes.
+ * @returns   true for e.g. a PNG, false for UTF-8 text.
+ */
+export const isBinary = (buf: Uint8Array) => buf.subarray(0, 8192).includes(0);
+
+/**
+ * A binary or image file's entry for the report, never its bytes as text. Pure.
+ *
+ * @param path Its path in the run, e.g. "c1/shot.png".
+ * @param buf  Its bytes.
+ * @returns    {path, kind: "image" | "binary", bytes}, or null for a text file.
+ */
+function binaryFile(path: string, buf: Uint8Array): FileText | null {
+  if (!IMAGE.test(path) && !isBinary(buf)) return null;
+  return { path, text: "", kind: IMAGE.test(path) ? "image" : "binary", bytes: buf.length };
+}
 
 /**
  * Read a role output json ({ok, data|error, sessionId, ms, raw}) as a Checked value, moving raw to debug. Pure.
@@ -165,12 +190,18 @@ export function loadRun(dir: string): RunView {
   const cuj = (id: string) => cujs.get(id) ?? cujs.set(id, emptyCuj(id)).get(id)!;
   for (const path of files) {
     if (path === "report.html") continue;
-    let text: string;
+    let buf: Buffer;
     try {
-      text = readFileSync(join(dir, path), "utf8");
+      buf = readFileSync(join(dir, path));
     } catch {
       continue;
     }
+    const bin = binaryFile(path, buf);
+    if (bin) {
+      view.unknown.push(bin);
+      continue;
+    }
+    const text = buf.toString("utf8");
     const parts = path.split("/");
     const filed = parts.length === 2 ? cujFile(() => cuj(parts[0]), path, text, view.raw) : topFile(view, path, text);
     if (filed) continue;
@@ -181,6 +212,14 @@ export function loadRun(dir: string): RunView {
   view.cujs = [...cujs.values()].sort((a, b) => a.id.localeCompare(b.id));
   return view;
 }
+
+/**
+ * The report's path as a file:// URL, so terminals make it clickable. Pure.
+ *
+ * @param dir The run folder, e.g. ".runs/2026-11-10T02-58-00-000Z"; resolved against the current folder.
+ * @returns   e.g. "file:///home/me/proj/.runs/2026-11-10T02-58-00-000Z/report.html".
+ */
+export const reportUrl = (dir: string) => pathToFileURL(resolve(dir, "report.html")).href;
 
 /**
  * Write dir/report.html for a run folder. Never throws: on any error it writes a minimal page, and if

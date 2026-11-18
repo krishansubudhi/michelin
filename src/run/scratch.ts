@@ -1,16 +1,27 @@
-// The subject's throwaway space: /tmp/michelin/runs/<runid>/ ($MICHELIN_TMP/runs/<runid>/ when set), made before setup and removed after teardown.
+// The subject's throwaway space: <tmp>/michelin-<user>/runs/<runid>/ ($MICHELIN_TMP/runs/<runid>/ when set), made before setup and removed after teardown.
 // Results never go here; they stay in .runs/<runid>/.
 //
 // Test: npm test (scratch.test.ts, no LLM).
 
 import { mkdirSync, rmSync } from "node:fs";
+import { tmpdir, userInfo } from "node:os";
 import { basename, join } from "node:path";
 
 /**
- * Michelin's machine-wide temp folder, shared by every OS user: /tmp/michelin, or $MICHELIN_TMP when set
- * (e.g. MICHELIN_TMP=/tmp/michelin-dev for a second OS user when /tmp/michelin is not world-writable).
+ * Michelin's temp folder for the run lock and scratch space. Pure.
+ * Per OS user by default, so a folder another user made can never fail with EACCES; set MICHELIN_TMP to one shared
+ * folder (chmod 1777) to hold a single run lock across users.
+ *
+ * @param env  The environment, e.g. process.env; MICHELIN_TMP wins when set and non-empty.
+ * @param tmp  The OS temp folder, e.g. "/tmp".
+ * @param user The OS user name, e.g. "jarvis".
+ * @returns    e.g. "/tmp/michelin-jarvis", or $MICHELIN_TMP.
  */
-export const TMP_ROOT = process.env.MICHELIN_TMP || "/tmp/michelin";
+export const tmpRoot = (env: NodeJS.ProcessEnv, tmp: string, user: string) =>
+  env.MICHELIN_TMP || join(tmp, `michelin-${user}`);
+
+/** This process's temp folder: $MICHELIN_TMP, else <os temp>/michelin-<user>. */
+export const TMP_ROOT = tmpRoot(process.env, tmpdir(), userInfo().username);
 
 /** Where every run's scratch folder lives. */
 export const SCRATCH_ROOT = join(TMP_ROOT, "runs");
@@ -19,14 +30,14 @@ export const SCRATCH_ROOT = join(TMP_ROOT, "runs");
  * The scratch folder for one run. Pure.
  *
  * @param runDir The run's output folder, e.g. ".runs/2026-11-10T02-58-00-000Z".
- * @returns      e.g. "/tmp/michelin/runs/2026-11-10T02-58-00-000Z".
+ * @returns      e.g. "/tmp/michelin-jarvis/runs/2026-11-10T02-58-00-000Z".
  */
 export const scratchFor = (runDir: string) => join(SCRATCH_ROOT, basename(runDir));
 
 /**
  * The line setup and teardown read, naming the scratch folder. Pure.
  *
- * @param dir The scratch folder, e.g. "/tmp/michelin/runs/x".
+ * @param dir The scratch folder, e.g. "/tmp/michelin-jarvis/runs/x".
  * @returns   The prompt line.
  */
 export const scratchNote = (dir: string) =>
@@ -35,13 +46,13 @@ export const scratchNote = (dir: string) =>
 /**
  * Make the scratch folder.
  *
- * @param dir The folder, e.g. "/tmp/michelin/runs/x".
+ * @param dir The folder, e.g. "/tmp/michelin-jarvis/runs/x".
  */
 export const makeScratch = (dir: string) => mkdirSync(dir, { recursive: true });
 
 /**
  * Delete the scratch folder, if it is still there.
  *
- * @param dir The folder, e.g. "/tmp/michelin/runs/x".
+ * @param dir The folder, e.g. "/tmp/michelin-jarvis/runs/x".
  */
 export const dropScratch = (dir: string) => rmSync(dir, { recursive: true, force: true });

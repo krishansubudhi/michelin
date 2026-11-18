@@ -43,6 +43,12 @@ test("the executor prompt has the instruction, never expectations", () => {
   for (const e of cuj.expectations) assert.ok(!p.includes(e), `leaked expectation: ${e}`);
 });
 
+test("the executor prompt times calls portably: node's Date.now, never GNU-only date +%s%N", () => {
+  const p = executorPrompt("HOWTO", { instruction: "do it" }, "/repo");
+  assert.ok(p.includes("s=$(node -p Date.now()); <command>; echo $(( $(node -p Date.now()) - s ))"));
+  assert.ok(!p.includes("s=$(date +%s%N)"));
+});
+
 test("the executor prompt asks for metrics: [] unless the how-to-run names some", () => {
   const p = executorPrompt("HOWTO", { instruction: "do it" }, "/repo");
   assert.match(p, /Return metrics: \[\] unless the how-to-run above names metrics/);

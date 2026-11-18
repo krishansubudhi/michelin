@@ -54,3 +54,16 @@ test("scrub: case-insensitive, longest first, the earlier group wins a shared fo
   assert.equal(scrub("a+b (c)", [[["a+b (c)"], "T"]]), "T", "regex characters are literal");
   assert.equal(scrub("unchanged", []), "unchanged");
 });
+
+test("scrub: whole tokens only, so code and diffs around a hidden name stay intact", () => {
+  const a: [string[], string] = [["ollama/gemma4:26b-mlx", "subjects/python3"], "Program A"];
+  assert.equal(
+    scrub("gemmatology uses gemma_utils; my_gemma4 vs gemma4.", [a]),
+    "gemmatology uses gemma_utils; my_gemma4 vs Program A.",
+  );
+  assert.equal(
+    scrub("-import pythonic\n+import python3x\nran python3 (gemma)", [a]),
+    "-import pythonic\n+import python3x\nran Program A (Program A)",
+  );
+  assert.equal(scrub("cd /x/y/work/src && ls /x/y/workshop", [[["/x/y/work"], "T"]]), "cd T/src && ls /x/y/workshop");
+});

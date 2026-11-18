@@ -1,25 +1,23 @@
-// `michelin init`: start a project in the current folder. Writes a starter michelin.json (the toy subject, its CUJ
-// folder, one run, the executor and judges from the built-in defaults/settings.json) and copies the package's toy
-// subject to ./subjects/toy. Never overwrites: an existing michelin.json or subjects/toy is kept and reported.
+// `michelin init`: start a project in the current folder. Writes a starter michelin.json holding only what differs from
+// the built-in defaults (the toy subject and its CUJ folder; runs, executor and judges come from defaults/settings.json)
+// and copies the package's toy subject to ./subjects/toy. Never overwrites: an existing michelin.json or subjects/toy is kept and reported.
 //
 // Test: node --test test/init.test.ts
 
 import { cpSync, existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadSettings } from "./settings.ts";
 
 /** This package's root folder, e.g. "/x/node_modules/michelin-eval/"; holds subjects/toy. */
 export const PKG_ROOT = fileURLToPath(new URL("../../", import.meta.url));
 
 /**
- * The starter michelin.json: the toy subject and its CUJ folder, one run, executor and judges from the defaults.
+ * The starter michelin.json: only what differs from the defaults, the toy subject and its CUJ folder. Pure.
  *
  * @returns Its contents as pretty JSON, ending in a newline.
  */
 export function starter(): string {
-  const { executor, judge } = loadSettings();
-  const config = { subject: "subjects/toy", cujs: ["subjects/toy/cujs/toy/"], runs: 1, executor, judge };
+  const config = { subject: "subjects/toy", cujs: ["subjects/toy/cujs/toy/"] };
   return `${JSON.stringify(config, null, 2)}\n`;
 }
 

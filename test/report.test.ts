@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
-import { loadRun, writeReport } from "../src/report/report.ts";
+import { isBinary, loadRun, reportUrl, writeReport } from "../src/report/report.ts";
 import { esc } from "../src/report/html.ts";
 import { renderReport } from "../src/report/render.ts";
 
@@ -101,6 +101,19 @@ test("an unknown file shows in a details block with its path", () => {
   assert.match(html, /<details><summary>notes\/extra\.xyz<\/summary><pre>mystery<\/pre><\/details>/);
 });
 
+test("binary files are never dumped as text: an image shows as <img>, other binary as a note", () => {
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d, 0x49, 0x48, 0x44, 0x52]);
+  const dir = newRun();
+  mkdirSync(join(dir, "c1"), { recursive: true });
+  writeFileSync(join(dir, "c1/shot 1.png"), png);
+  writeFileSync(join(dir, "blob.bin"), Buffer.from([1, 2, 0, 3, 0xff]));
+  const html = renderReport(loadRun(dir));
+  assert.match(html, /<summary>c1\/shot 1\.png<\/summary><img src="c1\/shot%201\.png" alt="c1\/shot 1\.png"/);
+  assert.match(html, /<summary>blob\.bin<\/summary><p>binary file, 5 bytes, not shown<\/p>/);
+  assert.ok(!html.includes("PNG\r\n"), "no PNG bytes in the page");
+  assert.ok(isBinary(png) && !isBinary(Buffer.from("plain text ✓")));
+});
+
 test("a failed setup shows a banner with the error", () => {
   const dir = runDir({
     "run.json": {
@@ -183,4 +196,9 @@ test("costs add up into a tile; a scratch session's resume hint changes folder f
   const html = renderReport(loadRun(dir));
   assert.match(html, /<b>\$0\.3750<\/b>total cost/);
   assert.ok(html.includes("cd /tmp/michelin-a &amp;&amp; claude --resume j-1"));
+});
+
+test("the report path is printed as a clickable file:// URL", () => {
+  assert.equal(reportUrl("/a b/.runs/r1"), "file:///a%20b/.runs/r1/report.html");
+  assert.match(reportUrl(".runs/r1"), /^file:\/\/\/.*\/\.runs\/r1\/report\.html$/);
 });

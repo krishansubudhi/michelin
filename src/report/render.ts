@@ -137,7 +137,13 @@ function tilesHtml(view: RunView): string {
  */
 function filesCard(title: string, files: FileText[]): string {
   if (!files.length) return "";
-  const one = (f: FileText) => `<details><summary>${esc(f.path)}</summary><pre>${esc(f.text)}</pre></details>`;
+  const body = (f: FileText) =>
+    f.kind === "image"
+      ? `<img src="${esc(encodeURI(f.path))}" alt="${esc(f.path)}" loading="lazy" style="max-width:100%">`
+      : f.kind === "binary"
+        ? `<p>binary file, ${f.bytes ?? 0} bytes, not shown</p>`
+        : `<pre>${esc(f.text)}</pre>`;
+  const one = (f: FileText) => `<details><summary>${esc(f.path)}</summary>${body(f)}</details>`;
   return `<section class="card"><h2>${esc(title)}</h2>${files.map(one).join("")}</section>`;
 }
 

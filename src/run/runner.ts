@@ -11,7 +11,7 @@
 // Every role returns typed JSON (claude --json-schema), validated on arrival; an invalid result is an error. A failed setup skips every CUJ (no executor, no judge), still destructs, and exits 1.
 //
 // CUJ files are found and checked in cujs.ts. The runner itself has no LLM. Only the judges see a CUJ's expectations; they run alongside teardown, reading saved outputs, never the subject. Models come from flags, ./michelin.json, then defaults/settings.json via settings.ts (--runs n repeats it all n times).
-// The subject's own install and temp state go in /tmp/michelin/runs/<runid>/ (scratch.ts): made before setup, named in the constructor's and destructor's prompts, deleted after the run. Everything else lands in .runs/<runid>/ (spec line 5):
+// The subject's own install and temp state go in <tmp>/michelin-<user>/runs/<runid>/ (scratch.ts): made before setup, named in the constructor's and destructor's prompts, deleted after the run. Everything else lands in .runs/<runid>/ (spec line 5):
 //   run.json                    the typed index: subject, settings, claude version, setup, statuses, scores, sessions, outputs, times
 //   constructor.json / destructor.json   their checked results ({ok, data} or {ok:false, error}, plus raw text)
 //   <cuj-id>/executor.json      the executor's checked result: steps [{action, input, got, ms}], reply and metrics [{name, value}]; files a step saved for the record (screenshots) sit beside it
@@ -40,7 +40,7 @@ import {
   type ExecutorResult,
   type Teardown,
 } from "../llm/schemas.ts";
-import { writeReport } from "../report/report.ts";
+import { reportUrl, writeReport } from "../report/report.ts";
 import { checkUniqueIds, cujId, expandCujs, loadCuj, resolveArg, runGroups, type Cuj } from "./cujs.ts";
 import { playNote, seedNote, sharedGiven, unseeded, type Given } from "./given.ts";
 import { exitCode, summary } from "./summary.ts";
@@ -93,7 +93,7 @@ export const executorPrompt = (
     "Your task:",
     cuj.instruction,
     'Return steps: one per call you made to the program, each {action: what you did, e.g. "run"; input: what you sent; got: what it printed, verbatim and in full (never shorten it, summarise it or elide any part with "..." or "{...}": a judge sees only what you put here); ms: how long it took}.',
-    'Measure ms, never estimate it: time each call, e.g. s=$(date +%s%N); <command>; echo $(( ($(date +%s%N) - s) / 1000000 )).\n\nReturn metrics: [] unless the how-to-run above names metrics to record (cost, tokens, steps, anything); then one {name, value} per metric it names, read the way it says, value as a string (e.g. {name: "tokens", value: "48210"}).',
+    'Measure ms, never estimate it: time each call, e.g. s=$(node -p Date.now()); <command>; echo $(( $(node -p Date.now()) - s )) (portable: never date +%s%N, which macOS lacks).\n\nReturn metrics: [] unless the how-to-run above names metrics to record (cost, tokens, steps, anything); then one {name, value} per metric it names, read the way it says, value as a string (e.g. {name: "tokens", value: "48210"}).',
     `If a step needs a browser, read ${skill} first.`,
     ...(out ? [`Save files for the record (e.g. screenshots) in ${out}; name each path in its step's got.`] : []),
     "Then reply: a short account of what happened.",
@@ -125,7 +125,7 @@ export type Ctx = {
   llm: Llm;
   /** `claude --version`, recorded in run.json; null or omitted if unknown. */
   claudeVersion?: string | null;
-  /** The subject's scratch folder, /tmp/michelin/runs/<runid>; omitted in tests. */
+  /** The subject's scratch folder, <tmp>/michelin-<user>/runs/<runid>; omitted in tests. */
   scratch?: string;
 };
 
@@ -362,13 +362,13 @@ async function runOnce(subject: string, settings: Settings, cujs: (readonly [str
   const ctx = { settings, dir, read, claudeVersion: claudeVersion(), llm: logged, scratch };
   const run = await runSubject(ctx, subject, cujs).finally(() => dropScratch(scratch));
   const { setup, setupError, cujs: status, scores } = run;
-  console.log(`${JSON.stringify({ setup, setupError, status, scores }, null, 2)}\n${join(dir, "report.html")}`);
+  console.log(`${JSON.stringify({ setup, setupError, status, scores }, null, 2)}\n${reportUrl(dir)}`);
   return run;
 }
 
 /**
  * The program: parse args (init and compare go to init.ts and compare.ts), load config and CUJs, then one run (one per CUJ for a folder: runGroups), all `runs` times.
- * Holds /tmp/michelin/run.lock for all of it, waiting for any other live run first (runlock.ts).
+ * Holds the run lock (<tmp>/michelin-<user>/run.lock, or $MICHELIN_TMP/run.lock) for all of it, waiting for any other live run first (runlock.ts).
  * Ends with a PASS/FAIL line per CUJ and the total; exits 1 if any setup failed.
  */
 async function main() {

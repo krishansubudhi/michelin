@@ -18,19 +18,12 @@ Any subset of these keys. An unknown or mistyped key is an error.
 | `pair_judges` | how many of `judge` (from the top) `michelin compare` uses                                                                                                                             | `1`                                         |
 | `tiebreak`    | `michelin compare`: `speed` gives a judged tie to the run 1.5x faster or more, `none` keeps it a tie                                                                                   | `speed`                                     |
 
-`effort` is one of the Claude Code CLI's effort levels. Every role is a `claude -p` call, and model ids go straight to `claude --model`. `michelin init` writes a starter file with the toy subject, its CUJ folder, one run, and the default executor and judges.
+`effort` is one of the Claude Code CLI's effort levels. Every role is a `claude -p` call, and model ids go straight to `claude --model`. `michelin init` writes a starter file holding only what differs from the defaults: the toy subject and its CUJ folder.
 
 ```json
 {
   "subject": "subjects/toy",
-  "cujs": ["subjects/toy/cujs/toy/"],
-  "runs": 1,
-  "executor": { "model": "claude-sonnet-5-5", "effort": "medium" },
-  "judge": [
-    { "model": "claude-opus-5-5", "effort": "high" },
-    { "model": "claude-sonnet-5-5", "effort": "high" },
-    { "model": "claude-fable-5-2", "effort": "high" }
-  ]
+  "cujs": ["subjects/toy/cujs/toy/"]
 }
 ```
 
@@ -51,7 +44,7 @@ Any subset of these keys. An unknown or mistyped key is an error.
 ## Environment variables
 
 - `MICHELIN_SUBJECTS`: colon-separated folders. A subject, CUJ or `--settings` path that does not exist as given is looked up under each, e.g. `MICHELIN_SUBJECTS=~/my-subjects michelin my-app my-app/cujs/smoke/`.
-- `MICHELIN_TMP`: the folder for the run lock and scratch space, instead of `/tmp/michelin`. Only one michelin runs per machine at a time. `/tmp/michelin` is shared by every OS user, so either make it `chmod 1777` or point each user's `MICHELIN_TMP` somewhere else.
+- `MICHELIN_TMP`: the folder for the run lock and scratch space, instead of the per-user `<os temp>/michelin-<user>` (e.g. `/tmp/michelin-jarvis`). Only one michelin runs at a time per lock folder; to hold one lock across OS users, point every user's `MICHELIN_TMP` at one shared folder made `chmod 1777`.
 
 A subject can read its own environment variables in setup.md. Every role inherits the environment michelin runs in, so export them before `michelin run`. The OpenCode subject (`subjects/opencode`) reads:
 

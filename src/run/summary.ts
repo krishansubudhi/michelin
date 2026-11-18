@@ -4,25 +4,36 @@
 
 /**
  * The end-of-run summary over one or more runs: one line per CUJ, then the total. Pure.
+ * A CUJ that ran more than once (--runs n) keeps every run: its line names each run's score and status, and it
+ * passes only when every run did.
  *
  * @param runs Each run's run.json contents (defs, cujs, scores), in order.
- * @returns   e.g. "PASS  toy-country   passed 2/2  (done)\n...\ntotal: 1/2 CUJs passed"; a CUJ passes
- *            only when every expectation did ("passed n/n").
+ * @returns   e.g. "PASS  toy-country   passed 2/2  (done)\n...\ntotal: 1/2 CUJs passed"; with --runs 2 a line reads
+ *            "FAIL  toy-country  1/2 runs passed: passed 2/2 (done), passed 1/2 (done)" and the total adds
+ *            "(3/4 runs)". A run passes only when every expectation did ("passed n/n").
  */
 export function summary(
   runs: { defs: object; cujs: Record<string, string>; scores: Record<string, string> }[],
 ): string {
-  const run = {
-    defs: Object.assign({}, ...runs.map((r) => r.defs)),
-    cujs: Object.assign({}, ...runs.map((r) => r.cujs)),
-    scores: Object.assign({}, ...runs.map((r) => r.scores)),
-  };
-  const ids = Object.keys(run.defs);
-  const pass = (id: string) => /^passed (\d+)\/\1$/.test(run.scores[id] ?? "");
+  const seen = new Map<string, { score: string; status: string }[]>();
+  for (const r of runs)
+    for (const id of Object.keys(r.defs))
+      seen.set(id, [...(seen.get(id) ?? []), { score: r.scores[id] ?? "unjudged", status: r.cujs[id] ?? "not run" }]);
+  const ids = [...seen.keys()];
+  const ok = (x: { score: string }) => /^passed (\d+)\/\1$/.test(x.score);
+  const pass = (id: string) => seen.get(id)!.every(ok);
   const w = Math.max(0, ...ids.map((id) => id.length));
-  const line = (id: string) =>
-    `${pass(id) ? "PASS" : "FAIL"}  ${id.padEnd(w)}  ${run.scores[id] ?? "unjudged"}  (${run.cujs[id] ?? "not run"})`;
-  return [...ids.map(line), `total: ${ids.filter(pass).length}/${ids.length} CUJs passed`].join("\n");
+  const line = (id: string) => {
+    const all = seen.get(id)!;
+    const what =
+      all.length === 1
+        ? `${all[0].score}  (${all[0].status})`
+        : `${all.filter(ok).length}/${all.length} runs passed: ${all.map((x) => `${x.score} (${x.status})`).join(", ")}`;
+    return `${pass(id) ? "PASS" : "FAIL"}  ${id.padEnd(w)}  ${what}`;
+  };
+  const each = [...seen.values()].flat();
+  const repeated = each.length > ids.length ? ` (${each.filter(ok).length}/${each.length} runs)` : "";
+  return [...ids.map(line), `total: ${ids.filter(pass).length}/${ids.length} CUJs passed${repeated}`].join("\n");
 }
 
 /**

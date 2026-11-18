@@ -12,3 +12,15 @@ total: 1/2 CUJs passed
 ```
 
 `toy-name` expects "Alice", so the judges must fail it: that is the must-fail control.
+
+A CUJ yaml has `instruction` (what the executor does, as a user would), `timeout_s` (a positive number) and `expectations` (a non-empty list, each judged alone from the evidence); `story` (a note for humans) and `given` (state seeded before the CUJ, see [concepts](concepts.md)) are optional. Any other key is an error.
+
+```yaml
+story: A first-time user checks the default country.
+instruction: |
+  Ask "What is my country?"
+timeout_s: 60
+expectations:
+  - The reply says USA.
+  - The reply came within 10 seconds.
+```

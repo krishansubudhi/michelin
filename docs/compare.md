@@ -24,3 +24,13 @@ At the end, the table, the total cost and the output folder are printed.
 Speed counts too. Each game records both runs' program time (the sum of the executor's measured step `ms`), shown in a
 per-CUJ time table in compare.md and on each game in report.html. A judged tie goes to the run that took 1.5x less time
 or better (`--tiebreak speed`, the default); `--tiebreak none` or `"tiebreak": "none"` in michelin.json keeps it a tie.
+
+**An A/B, end to end.** Run the same CUJ twice with one thing changed, then compare the two run folders (each run prints its `run dir:`). With OpenCode from the source repo, the change is the model:
+
+```sh
+OPENCODE_MODEL=ollama/<model A> michelin run subjects/opencode subjects/opencode/cujs/opencode/fix_test.yaml
+OPENCODE_MODEL=ollama/<model B> michelin run subjects/opencode subjects/opencode/cujs/opencode/fix_test.yaml
+michelin compare a=.runs/<run A id> b=.runs/<run B id>
+```
+
+`--baseline <run folder>` is a different tool: in a normal run it calls in the other judges whenever the first judge's verdict differs from that earlier run's, a regression check rather than a head-to-head.

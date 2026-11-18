@@ -5,8 +5,11 @@ import type { Session } from "../llm/models.ts";
 import type { Outcome } from "../llm/judge.ts";
 import type { Checked, Setup, Teardown, ExecutorResult, JudgeResult } from "../llm/schemas.ts";
 
-/** A file kept as plain text, e.g. {path: "llm.log", text: "..."}. */
-export type FileText = { path: string; text: string };
+/**
+ * A file kept as plain text, e.g. {path: "llm.log", text: "..."}. A binary file has no text: kind "image" (shown as
+ * an <img> linking the file beside report.html) or "binary" (named with its size, never dumped).
+ */
+export type FileText = { path: string; text: string; kind?: "image" | "binary"; bytes?: number };
 
 // Parsed JSON of unknown shape: every field is probed defensively, so a precise type would be a lie.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

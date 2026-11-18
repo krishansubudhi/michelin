@@ -36,6 +36,34 @@ total: 1/2 CUJs passed
 
 **Settings.** Flags override `./michelin.json`, which overrides the built-in defaults. For example, `michelin run --runs 3` runs every CUJ three times. Every key, flag and environment variable: [docs/settings.md](docs/settings.md).
 
+## Your own eval
+
+A subject is a folder of three plain-English files the LLM roles follow:
+
+- `setup.md`: install and start your program; print the handles (ports, tokens) later steps need.
+- `howtorun.md`: how to talk to it (a command, a URL, a chat).
+- `teardown.md`: what to stop and delete afterwards.
+
+A CUJ is a yaml file in `<subject>/cujs/`:
+
+```yaml
+instruction: |
+  Ask "What is my country?"
+timeout_s: 60
+expectations:
+  - The reply says USA.
+```
+
+For an A/B, run the same CUJ twice with one thing changed (here the executor's model; for OpenCode, `OPENCODE_MODEL`), then blind judges pick the better run. Each `michelin run` prints its `run dir:`.
+
+```sh
+michelin run subjects/toy subjects/toy/cujs/toy/country.yaml --model claude-haiku-5-5
+michelin run subjects/toy subjects/toy/cujs/toy/country.yaml --model claude-sonnet-5-5
+michelin compare haiku=.runs/<first run id> sonnet=.runs/<second run id>
+```
+
+More: [Write a subject](docs/write-a-subject.md), [Compare](docs/compare.md).
+
 ## A real result: OpenCode
 
 [OpenCode](https://opencode.ai) on Gemma 4 26B (local Ollama), one run per CUJ (n=1), Sonnet 5.5 executor, three judges (Opus 5.5, Sonnet 5.5, Fable 5.2):
@@ -54,6 +82,7 @@ The control failing is the healthy outcome. Details: [RESULTS.md](subjects/openc
 
 - [Concepts](docs/concepts.md)
 - [Settings](docs/settings.md)
+- [Compare runs (A/B)](docs/compare.md)
 - [Write a subject](docs/write-a-subject.md)
 - [Subjects outside this repo](docs/external-subjects.md)
 - [Evaluate OpenCode](docs/opencode.md)

@@ -6,12 +6,13 @@ import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { RUN_LOCK, acquireRunLock, alive } from "../src/run/runlock.ts";
+import { TMP_ROOT } from "../src/run/scratch.ts";
 
 const lockIn = () => join(mkdtempSync(join(tmpdir(), "runlock-")), "run.lock");
 const deadPid = () => spawnSync("true").pid as number;
 
-test("the lock lives in the shared /tmp/michelin ($MICHELIN_TMP when set); alive() knows a dead pid", () => {
-  assert.equal(RUN_LOCK, `${process.env.MICHELIN_TMP || "/tmp/michelin"}/run.lock`);
+test("the lock lives in the temp folder (per user, or $MICHELIN_TMP); alive() knows a dead pid", () => {
+  assert.equal(RUN_LOCK, `${TMP_ROOT}/run.lock`);
   assert.ok(alive(process.pid));
   assert.ok(!alive(deadPid()));
 });

@@ -2,7 +2,8 @@
 //
 // A head-to-head judge must not know which program is which, so every identifier of each run, and its short
 // forms ("ollama/gemma4:26b-mlx" -> "gemma4:26b-mlx", "gemma4", "gemma"), is replaced by a neutral tag such as
-// "Program A". Paths are only ever replaced whole, so a folder ".../work" never hides the word "work". Pure.
+// "Program A". Paths are only ever replaced whole, so a folder ".../work" never hides the word "work", and every form
+// matches whole tokens only: "gemma" never eats into "gemmatology" nor "qwen" into "qwen_utils". Pure.
 //
 // Test: npm test (scrub.test.ts, no LLM).
 
@@ -74,8 +75,12 @@ export function variants(id: string): string[] {
   return [...new Set(all.filter((v) => v.length >= 3))];
 }
 
+/** A letter, digit or underscore: what a hidden form may not touch on either side, so only whole tokens match. */
+const WORD = "[\\p{L}\\p{N}_]";
+
 /**
- * Replace every form of every identifier with its group's tag, case-insensitively, longest first. Pure.
+ * Replace every form of every identifier with its group's tag, case-insensitively, longest first, whole tokens only
+ * (no letter, digit or underscore right before or after a match). Pure.
  *
  * @param text   The text to scrub, e.g. "gemma4 answered 13".
  * @param groups Identifiers and the tag that replaces them, e.g. [[["ollama/gemma4:26b-mlx"], "Program A"]];
@@ -90,5 +95,6 @@ export function scrub(text: string, groups: [ids: string[], tag: string][]): str
   const alts = [...tags.keys()]
     .sort((a, b) => b.length - a.length)
     .map((v) => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-  return text.replace(new RegExp(alts.join("|"), "gi"), (m) => tags.get(m.toLowerCase())!);
+  const re = new RegExp(`(?<!${WORD})(?:${alts.join("|")})(?!${WORD})`, "giu");
+  return text.replace(re, (m) => tags.get(m.toLowerCase())!);
 }

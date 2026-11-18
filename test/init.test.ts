@@ -21,6 +21,15 @@ test("init writes michelin.json and copies the toy subject; the file resolves to
   assert.deepEqual([c.settings.executor, c.settings.judge], [d.executor, d.judge]);
 });
 
+test("the starter michelin.json holds only what differs from the defaults: subject and cujs", () => {
+  const cwd = tmp();
+  init(cwd, PKG_ROOT);
+  assert.deepEqual(JSON.parse(readFileSync(join(cwd, "michelin.json"), "utf8")), {
+    subject: "subjects/toy",
+    cujs: ["subjects/toy/cujs/toy/"],
+  });
+});
+
 test("a second init overwrites nothing and says so", () => {
   const cwd = tmp();
   init(cwd, PKG_ROOT);

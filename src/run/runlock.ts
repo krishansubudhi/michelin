@@ -1,6 +1,6 @@
 // One michelin run at a time, across processes and users: setup.md picks ports by scanning up from 8797, which races.
-// The lock is /tmp/michelin/run.lock ($MICHELIN_TMP/run.lock when set), holding {pid, user, started}. /tmp/michelin is shared by every OS user on the machine
-// (sticky 1777), so the file is made 0644 by an atomic exclusive link of a fully written temp file.
+// The lock is <tmp>/michelin-<user>/run.lock ($MICHELIN_TMP/run.lock when set), holding {pid, user, started}. The default folder is per user;
+// a MICHELIN_TMP shared by every OS user (sticky 1777) locks across users, so the file is made 0644 by an atomic exclusive link of a fully written temp file.
 //
 // Test: npm test (runlock.test.ts, no LLM).
 
