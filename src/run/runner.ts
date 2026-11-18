@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 // The runner: one program that takes a subject from construction to destruction.
 //
-//   node src/run/runner.ts subjects/toy subjects/toy/cujs/toy/country.yaml   (--help for usage; `michelin` via bin/michelin.js)
-//   node src/run/runner.ts subjects/toy subjects/toy/cujs/toy/   (a folder: every *.yaml in it, sorted, each a fresh run)
-// Test: npm test (no LLM, ~1 s). Live: the second command above (one CUJ end to end). `michelin init`: init.ts.
+//   node src/run/runner.ts subjects/toy subjects/toy/cujs/toy/country.yaml   (--help for usage; `michelin` via bin/michelin.js; a folder instead of the .yaml runs every *.yaml in it, sorted, each a fresh run)
+// Test: npm test (no LLM, ~1 s). Live: the command above (one CUJ end to end). `michelin init`: init.ts; `michelin compare`: compare.ts.
 // CUJ files or folders come from the command line or michelin.json's cujs; with none it prints usage and an error to stderr and exits 2 before any setup. Steps (spec line 4):
 //   a. constructor LLM reads <subject>/setup.md, runs it, seeds the CUJs' given (once; Setup, schemas.ts; given.ts)
 //   b. executor LLM gets howtorun.md + one CUJ instruction       (per CUJ, killed at timeout_s; ExecutorResult; runs in a fresh temp folder, told where the repo is so howtorun's relative paths resolve)
@@ -368,7 +367,7 @@ async function runOnce(subject: string, settings: Settings, cujs: (readonly [str
 }
 
 /**
- * The program: parse args, load config and CUJs, then one run (one per CUJ for a folder: runGroups), all `runs` times.
+ * The program: parse args (init and compare go to init.ts and compare.ts), load config and CUJs, then one run (one per CUJ for a folder: runGroups), all `runs` times.
  * Holds /tmp/michelin/run.lock for all of it, waiting for any other live run first (runlock.ts).
  * Ends with a PASS/FAIL line per CUJ and the total; exits 1 if any setup failed.
  */
@@ -376,6 +375,7 @@ async function main() {
   const args = parseCli(process.argv.slice(2));
   if (!args) return console.log(USAGE);
   if (args.command === "init") return void init(process.cwd(), PKG_ROOT);
+  if (args.command === "compare") return void (await (await import("./compare.ts")).compareMain(args, llm));
   const settingsPath = args.settingsPath && resolveArg(args.settingsPath);
   const { settings, runs: times, ...file } = loadConfig({ ...args, settingsPath, cwd: process.cwd() });
   const [subject, ...picked] = pickTargets(args, file).map((p) => resolveArg(p)); // or under MICHELIN_SUBJECTS

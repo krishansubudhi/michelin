@@ -2,7 +2,8 @@
 // Each top-level field comes from the first that has it: command-line flags (--model, --judges, --runs), then
 // ./michelin.json (or the file given with --settings <file> instead), then the built-in defaults/settings.json in
 // this package (found from import.meta.url, never the current folder). michelin.json may hold any subset of the
-// roles below plus subject (string), cujs (list of strings) and runs (whole number >= 1).
+// roles below plus subject (string), cujs (list of strings), runs (whole number >= 1) and pair_judges (whole
+// number >= 1: how many of the first judges `michelin compare` asks, default 1).
 // Every entry is {"model": "<id>", "effort": "<low|medium|high|xhigh|max>"}.
 //
 //   constructor  runs <subject>/setup.md         (one entry)
@@ -113,6 +114,8 @@ export type Config = {
   cujs: string[];
   /** How many times to run every CUJ, e.g. 3; default 1. */
   runs: number;
+  /** How many of the first judges `michelin compare` asks when --judges isn't given, e.g. 3; default 1. */
+  pairJudges: number;
 };
 
 /** Per extra michelin.json field: a check of its value and what it must be. */
@@ -120,6 +123,7 @@ const EXTRA: Record<string, [(v: unknown) => boolean, string]> = {
   subject: [(v) => typeof v === "string" && v !== "", "a non-empty string"],
   cujs: [(v) => Array.isArray(v) && v.every((c) => typeof c === "string"), "a list of strings"],
   runs: [(v) => Number.isInteger(v) && (v as number) >= 1, "a whole number >= 1"],
+  pair_judges: [(v) => Number.isInteger(v) && (v as number) >= 1, "a whole number >= 1"],
 };
 
 /**
@@ -160,11 +164,27 @@ function parsePick(s: string, effort: Pick["effort"], flag: string): Pick {
 }
 
 /**
+ * The non-role fields of a resolved config, each from flags, then the file, then its default. Pure.
+ *
+ * @param f     The checked file, e.g. {subject: "subjects/toy", runs: 2, pair_judges: 3}.
+ * @param flags From the command line, e.g. {runs: 5}; only runs is read.
+ * @returns     subject (undefined if none), cujs ([] if none), runs (default 1) and pairJudges (default 1).
+ */
+function extras(f: Record<string, unknown>, flags: Flags): Omit<Config, "settings"> {
+  return {
+    subject: f.subject as string | undefined,
+    cujs: (f.cujs as string[]) ?? [],
+    runs: flags.runs ?? (f.runs as number) ?? 1,
+    pairJudges: (f.pair_judges as number) ?? 1,
+  };
+}
+
+/**
  * Merge the three sources of settings, field by field: flags win over the file, the file over the defaults.
  * Pure: reads nothing.
  *
  * @param defaults The built-in settings, e.g. loadSettings() of defaults/settings.json.
- * @param file     The parsed michelin.json (or --settings file), any subset of fields, e.g. {runs: 2}; {} if none.
+ * @param file     The parsed michelin.json (or --settings file), any subset of fields, e.g. {runs: 2, pair_judges: 3}; {} if none.
  * @param flags    From the command line, e.g. {model: "claude-sonnet-5-5@high", judges: "claude-opus-5-5", runs: 3}.
  * @param path     The file, named in every error, e.g. "michelin.json".
  * @returns        The merged config; settings carry no judging (loadConfig adds it).
@@ -181,8 +201,7 @@ export function resolveSettings(defaults: Settings, file: unknown, flags: Flags,
   if (flags.model) roles.executor = parsePick(flags.model, roles.executor.effort, "--model");
   if (flags.judges) roles.judge = flags.judges.split(",").map((j) => parsePick(j, "high", "--judges"));
   checkFields(roles, path);
-  const subject = f.subject as string | undefined;
-  return { settings: roles, subject, cujs: (f.cujs as string[]) ?? [], runs: flags.runs ?? (f.runs as number) ?? 1 };
+  return { settings: roles, ...extras(f, flags) };
 }
 
 /**

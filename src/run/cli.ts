@@ -7,7 +7,12 @@ import { parseArgs } from "node:util";
 /** Printed by --help, and as the error when no subject or no CUJ is given. */
 export const USAGE = `usage: michelin [run] [options] [<subject> <cuj> [cuj ...]]
        michelin init
+       michelin compare [--judges a,b@e] [--settings file] [--hide tok]... <run> <run> [<run> ...]
   init             write a starter michelin.json and copy the toy subject to ./subjects/toy (never overwrites)
+  compare          blind head-to-head of finished runs: judges pick the better run per shared CUJ, in both orders
+                   (docs/compare.md); each <run> is a run folder or name=folder, e.g. gemma=.runs/2026-11-17T10-00-00-000Z;
+                   --judges as below (default the first pair_judges judges in michelin.json, 1 unless set);
+                   --hide tok also scrubs tok from what the judges see (repeatable)
   run              run CUJs (the word is optional: michelin <subject> <cuj> works too)
   <subject>        folder with setup.md, howtorun.md and teardown.md, e.g. subjects/toy; default michelin.json's subject
   <cuj> ...        one or more CUJ yaml files or folders, e.g. subjects/toy/cujs/toy/country.yaml or subjects/toy/cujs/toy/;
@@ -22,7 +27,7 @@ export const USAGE = `usage: michelin [run] [options] [<subject> <cuj> [cuj ...]
   --baseline dir   an earlier run folder whose <cuj-id>/verdict.json is the baseline verdict (repeatable, first match wins)
   -h, --help       show this help
 Settings come from flags, then ./michelin.json (any subset of constructor, executor, destructor, judge, subject, cujs,
-runs), then the built-in defaults/settings.json; a --settings file replaces ./michelin.json.
+runs, pair_judges), then the built-in defaults/settings.json; a --settings file replaces ./michelin.json.
 A subject, CUJ or settings path that does not exist as given is looked up under each folder in MICHELIN_SUBJECTS
 (colon-separated), e.g. MICHELIN_SUBJECTS=~/my-subjects michelin my-app my-app/cujs/smoke/`;
 
@@ -47,10 +52,13 @@ function parseRuns(s: string | undefined): number | undefined {
  * Parse the runner's command line.
  *
  * @param argv The arguments after `michelin`, i.e. process.argv.slice(2), e.g. ["run", "subjects/toy", "a.yaml"].
- * @returns    null if --help / -h was given; {command: "init"} for `michelin init`; otherwise command "run", subject (undefined if none given), picked (CUJ
+ * @returns    null if --help / -h was given; {command: "init"} for `michelin init`; for `michelin compare a b`
+ *             {command: "compare", runs: ["a", "b"], settingsPath, flags: {judges}, hide: the --hide tokens, [] if none};
+ *             otherwise command "run", subject (undefined if none given), picked (CUJ
  *             files, maybe []), settingsPath (undefined unless --settings is given), judging: all (true with
  *             --all-judges) and baselines (the --baseline folders in order, [] if none), and flags {model, judges, runs}.
- * @throws     On an unknown flag; a UsageError (exit 2) on a bad --runs.
+ * @throws     On an unknown flag; a UsageError (exit 2) on a bad --runs, compare with under two runs, or --hide
+ *             outside compare.
  */
 export function parseCli(argv: string[]) {
   const { values, positionals } = parseArgs({
@@ -63,11 +71,19 @@ export function parseCli(argv: string[]) {
       runs: { type: "string" },
       "all-judges": { type: "boolean" },
       baseline: { type: "string", multiple: true },
+      hide: { type: "string", multiple: true },
       help: { type: "boolean", short: "h" },
     },
   });
   if (values.help) return null;
   if (positionals[0] === "init") return { command: "init" as const };
+  if (positionals[0] === "compare") {
+    const runs = positionals.slice(1);
+    if (runs.length < 2) throw new UsageError(`compare needs two or more run folders, got ${runs.length}`);
+    const [settingsPath, hide] = [values.settings, values.hide ?? []];
+    return { command: "compare" as const, runs, settingsPath, flags: { judges: values.judges }, hide };
+  }
+  if (values.hide) throw new UsageError("--hide is only for michelin compare");
   const [subject, ...picked] = positionals[0] === "run" ? positionals.slice(1) : positionals;
   return {
     command: "run" as const,

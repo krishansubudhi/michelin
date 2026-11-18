@@ -78,13 +78,14 @@ const defaults = { constructor: h, executor: s5, destructor: h, judge: [o] } as 
 const resolved = (file: unknown, flags = {}) => resolveSettings(defaults, file, flags, "michelin.json");
 
 test("no file and no flags: the defaults, no subject, no CUJs, one run", () => {
-  assert.deepEqual(resolved({}), { settings: defaults, subject: undefined, cujs: [], runs: 1 });
+  assert.deepEqual(resolved({}), { settings: defaults, subject: undefined, cujs: [], runs: 1, pairJudges: 1 });
 });
 
 test("a partial file overrides only its fields; flags override the file", () => {
   const file = { executor: o, subject: "subjects/toy", cujs: ["subjects/toy/cujs/toy/"], runs: 2 };
   const c = resolved(file);
-  assert.deepEqual(c, { settings: { ...defaults, executor: o }, subject: "subjects/toy", cujs: file.cujs, runs: 2 });
+  const want = { settings: { ...defaults, executor: o }, subject: "subjects/toy", cujs: file.cujs, runs: 2 };
+  assert.deepEqual(c, { ...want, pairJudges: 1 });
   const f = resolved(file, { model: "claude-sonnet-5-5", judges: "claude-opus-5-5,claude-sonnet-5-5@medium", runs: 5 });
   assert.deepEqual(f.settings.executor, { model: "claude-sonnet-5-5", effort: "high" }, "keeps the file's effort");
   assert.deepEqual(f.settings.judge, [o, s5], "effort high unless given");
@@ -97,6 +98,8 @@ test("a bad file field or flag is refused, naming the file and the field", () =>
     [{ judges: [o] }, /michelin.json: unknown field "judges"/],
     [{ runs: 0 }, /michelin.json: field "runs"/],
     [{ runs: 1.5 }, /michelin.json: field "runs"/],
+    [{ pair_judges: 0 }, /michelin.json: field "pair_judges"/],
+    [{ pair_judges: "2" }, /michelin.json: field "pair_judges"/],
     [{ subject: 3 }, /michelin.json: field "subject"/],
     [{ cujs: "a.yaml" }, /michelin.json: field "cujs"/],
     [{ executor: "m" }, /michelin.json: field "executor"/],
@@ -119,4 +122,13 @@ test("loadConfig reads ./michelin.json when present, or the --settings file inst
   assert.deepEqual([o3.subject, o3.runs], [undefined, 3], "--settings replaces michelin.json");
   assert.equal(loadConfig({ flags: { runs: 4 }, cwd }).runs, 4);
   assert.throws(() => loadConfig({ settingsPath: "nope.json", flags: {}, cwd }), /ENOENT/);
+});
+
+test("pair_judges: default 1, else michelin.json's whole number", () => {
+  assert.equal(resolved({}).pairJudges, 1);
+  assert.equal(resolved({ pair_judges: 3 }).pairJudges, 3);
+  const cwd = mkdtempSync(join(tmpdir(), "config-"));
+  assert.equal(loadConfig({ flags: {}, cwd }).pairJudges, 1, "no michelin.json");
+  writeFileSync(join(cwd, "michelin.json"), JSON.stringify({ pair_judges: 2 }));
+  assert.equal(loadConfig({ flags: {}, cwd }).pairJudges, 2);
 });

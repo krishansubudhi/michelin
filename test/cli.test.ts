@@ -58,3 +58,21 @@ test("no subject or no CUJs is a usage error, not a fallback to every CUJ", () =
   assert.throws(() => pickTargets({ subject: "s", picked: [] }, { subject: "f", cujs: ["a.yaml"] }), usage(NO_CUJS));
   assert.throws(() => pickTargets({ picked: [] }, { subject: "f", cujs: [] }), usage(NO_CUJS));
 });
+
+test("michelin compare: two or more runs (dir or name=dir), --judges, --settings and repeatable --hide", () => {
+  assert.deepEqual(
+    parseCli(["compare", "--judges", "a,b@low", "--hide", "box", "--hide", "me", "x=.runs/1", ".runs/2"]),
+    {
+      command: "compare",
+      runs: ["x=.runs/1", ".runs/2"],
+      settingsPath: undefined,
+      flags: { judges: "a,b@low" },
+      hide: ["box", "me"],
+    },
+  );
+  const c = parseCli(["compare", "--settings", "s.json", "a", "b", "c"]);
+  assert.deepEqual(c?.command === "compare" && [c.runs, c.settingsPath, c.hide], [["a", "b", "c"], "s.json", []]);
+  assert.throws(() => parseCli(["compare", "a"]), usage(/compare needs two or more run folders, got 1/));
+  assert.throws(() => parseCli(["compare"]), usage(/got 0/));
+  assert.throws(() => parseCli(["--hide", "x", "s", "a.yaml"]), usage(/only for michelin compare/));
+});
