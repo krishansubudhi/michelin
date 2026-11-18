@@ -46,6 +46,8 @@ total: 1/2 CUJs passed
 
 The control failing is the healthy outcome. Details: [RESULTS.md](subjects/opencode/RESULTS.md).
 
+**Blind compare vs real tests.** On 5 SWE-bench Lite tasks, Qwen 3.8 27B resolved 4 of 5 and Gemma 4 26B 0 of 5 by the real tests; the blind judge preferred Qwen on all 5. Small sample, and the judge saw the test output: see the limits in [RESULTS.md](subjects/opencode/RESULTS.md#swe-bench-lite-gemma-4-26b-vs-qwen-38-27b-2026-11-18).
+
 ## Docs
 
 - [Concepts and settings](docs/concepts.md)

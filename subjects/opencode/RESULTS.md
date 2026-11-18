@@ -40,3 +40,13 @@ One OpenCode run per model on the 5 `cujs/swe/` CUJs, then `michelin compare` (1
 
 Qwen resolves 4/5 and Gemma 0/5. The judge went 5-0 for Qwen and agreed with the tests on 4/5: on 6116 neither model
 resolves, and the judge credited Qwen's partial attempt. Judge cost: $0.36.
+
+**Limits.** This is small: 5 tasks, the 5 easiest pytest instances of SWE-bench Lite, one run per model, one judge
+(Sonnet 5.5, both orders). Gemma made no edit at all on 4 of the 5 (an empty `opencode.patch`), so on those the judge
+only had to tell an attempt from no attempt, which is an easy call. The one informative case is pytest-7168, where both
+models edited (9/11 vs 11/11 FAIL_TO_PASS) and the judge picked the one the tests favour. On pytest-6116 neither model
+resolved the issue and the judge still preferred Qwen's one-line edit over Gemma's empty diff, which the tests cannot
+confirm. The judge was blind to which model ran, but not to the tests: each CUJ has the executor run `check.sh` and
+record its output, so the judge read the FAIL_TO_PASS / PASS_TO_PASS counts it was ranking. Its agreement with the
+tests is therefore not independent. Read this as a sanity check that the blind compare points the same way as real
+tests, not as a model ranking and not as a judge-accuracy number.
