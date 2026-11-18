@@ -7,4 +7,10 @@ I=$D/$1
 W=$2
 cd "$W/repo" || { echo "check failed: no $W/repo"; exit 1; }
 git apply --reject "$I/test.patch" 2>&1 | tail -3
-"$W/venv/bin/python" "$D/swecheck.py" "$I/f2p.txt" "$I/p2p.txt"
+# A fresh TMPDIR per check: a stale pytest-of-$USER basetemp that old pytest cannot delete otherwise errors every
+# tmpdir test (pytest 5.x on 6116: 70 errors, PASS_TO_PASS 1/69 even on the untouched base).
+T=$(mktemp -d "${TMPDIR:-/tmp}/swecheck.XXXXXX")
+TMPDIR=$T "$W/venv/bin/python" "$D/swecheck.py" "$I/f2p.txt" "$I/p2p.txt"
+rc=$?
+rm -rf "$T"
+exit $rc
