@@ -1,2 +1,0 @@
-testing/test_junitxml.py::TestPython::test_hostname_in_xml
-testing/test_junitxml.py::TestPython::test_timestamp_in_xml

@@ -1,0 +1,2 @@
+testing/test_collection.py::TestCustomConftests::test_pytest_fs_collect_hooks_are_seen
+testing/test_collection.py::TestCustomConftests::test_pytest_collect_file_from_sister_dir
