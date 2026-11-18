@@ -34,7 +34,7 @@ function gameHtml(g: Game): string {
       `<li>${esc(g.a)} shown as B: ${esc(named(g, v.ba, "B"))}. ${esc(v.whyBA)}</li></ul></li>`,
   );
   return (
-    `<details><summary>${esc(g.cuj)}: ${esc(g.a)} vs ${esc(g.b)} · winner ${esc(won)}</summary>` +
+    `<details open><summary>${esc(g.cuj)}: ${esc(g.a)} vs ${esc(g.b)} · winner ${esc(won)}</summary>` +
     `<ul>${judges.join("")}</ul></details>`
   );
 }
