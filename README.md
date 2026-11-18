@@ -15,13 +15,13 @@
 
 ## Quickstart
 
-Needs Node 22.18+, `git`, `python3` (for the toy subject) and the [`claude` CLI](https://docs.anthropic.com/en/docs/claude-code), logged in. Every role is a `claude -p` call, so runs use your Claude plan or API credit; this quickstart cost about $0.12.
+Needs Node 22.18+, `git`, `python3` (for the toy subject) and the [`claude` CLI](https://docs.anthropic.com/en/docs/claude-code), logged in. Every role is a `claude -p` call, so runs use your Claude plan or API credit.
 
 ```sh
 npm install -g github:krishansubudhi/michelin   # installs the `michelin` command
 mkdir my-evals && cd my-evals
 michelin init                                   # writes michelin.json and copies the toy subject
-michelin run --judges claude-haiku-5-5          # cheapest judge; drop the flag for the default Opus panel
+michelin run                                    # the first judge scores alone; the others join only on a fail
 ```
 
 Expected ending (about a minute):
@@ -32,7 +32,9 @@ FAIL  toy-name     passed 0/1  (done)
 total: 1/2 CUJs passed
 ```
 
-`toy-name` is the must-fail control: the toy always answers "USA", so a healthy judge fails "The reply says Alice". Each CUJ leaves `.runs/<runid>/report.html`. Flags `--model`, `--judges` and `--runs` override `michelin.json`, which overrides the built-in defaults.
+`toy-name` is the must-fail control: the toy always answers "USA", so a healthy judge fails "The reply says Alice". Each CUJ leaves `.runs/<runid>/report.html`.
+
+**Settings.** Flags override `./michelin.json`, which overrides the built-in defaults. For example, `michelin run --runs 3` runs every CUJ three times. Every key, flag and environment variable: [docs/settings.md](docs/settings.md).
 
 ## A real result: OpenCode
 
@@ -50,7 +52,8 @@ The control failing is the healthy outcome. Details: [RESULTS.md](subjects/openc
 
 ## Docs
 
-- [Concepts and settings](docs/concepts.md)
+- [Concepts](docs/concepts.md)
+- [Settings](docs/settings.md)
 - [Write a subject](docs/write-a-subject.md)
 - [Subjects outside this repo](docs/external-subjects.md)
 - [Evaluate OpenCode](docs/opencode.md)

@@ -23,10 +23,4 @@ Every suite should ship a **must-fail control**: a CUJ the subject handles corre
 
 ## Settings
 
-Each setting comes from the first place that has it: command-line flags, then `./michelin.json`, then the built-in `defaults/settings.json`.
-
-- `michelin.json` may hold any subset of `constructor`, `executor`, `destructor` (each `{"model", "effort"}`), `judge` (a list of them), `subject`, `cujs` and `runs`. `michelin init` writes a starter one.
-- `michelin run` with no subject runs `michelin.json`'s `subject` and `cujs`; `michelin run <subject> <cuj> [cuj ...]` names them (the word `run` is optional). `michelin init` writes the starter file and copies the toy subject to `subjects/toy`.
-- `--settings <file>` reads that file instead of `./michelin.json`.
-- `--model m[@effort]` sets the executor's model, `--judges a,b[@effort]` the judge list, `--runs n` repeats every CUJ n times.
-- Every role runs through the Claude Code CLI; model ids go straight to `claude --model`.
+Flags, then `./michelin.json`, then the built-in defaults: every key, flag and environment variable is in [settings.md](settings.md).
