@@ -33,6 +33,8 @@ export type CujView = {
   judges: Record<string, Checked<JudgeResult>>;
   /** This CUJ's sessions as [label, session], label without the CUJ prefix, e.g. "executor". */
   sessions: [string, Session][];
+  /** Text of each *.patch / *.diff file saved in the CUJ folder, e.g. ["diff --git a/x b/x\n..."]. */
+  patches?: string[];
 };
 
 /** Typed view of one run folder; what renderReport draws. */

@@ -140,7 +140,92 @@ function defHtml(c: CujView): string {
 }
 
 /**
- * A CUJ node's body: definition, verdicts and judge errors, steps, reply, sessions. Pure.
+ * Whether a CUJ failed: an expectation failed, the executor failed, or its status is an error. Pure.
+ *
+ * @param c The CUJ view.
+ * @returns true if it failed.
+ */
+const failed = (c: CujView): boolean =>
+  c.outcomes.some((o) => o.pass === false) || c.executor?.ok === false || c.status.startsWith("error");
+
+/**
+ * A count with its noun, singular for 1. Pure.
+ *
+ * @param n    The count, e.g. 4.
+ * @param noun The singular noun, e.g. "executor step".
+ * @returns    e.g. "4 executor steps" or "1 executor step".
+ */
+const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`;
+
+/**
+ * How many distinct files some patches change: their "diff --git a/<path> " lines, else their "+++ b/<path>" lines
+ * (so "+++ /dev/null" never counts). Pure.
+ *
+ * @param patches Patch texts, e.g. ["diff --git a/x b/x\n..."].
+ * @returns       The number of distinct paths; 0 for empty patches.
+ */
+function filesChanged(patches: string[]): number {
+  const paths = (re: RegExp) => new Set(patches.flatMap((p) => [...p.matchAll(re)].map((m) => m[1])));
+  const git = paths(/^diff --git a\/(\S+) /gm);
+  if (git.size) return git.size;
+  return paths(/^\+\+\+ b\/(\S+)/gm).size;
+}
+
+/**
+ * A reply as one line, whitespace collapsed; if longer than 200 characters, its first 200 then "…". Pure.
+ *
+ * @param reply The executor's reply.
+ * @returns     The short reply.
+ */
+function shortReply(reply: string): string {
+  const s = reply.replace(/\s+/g, " ").trim();
+  return s.length > 200 ? `${s.slice(0, 200)}…` : s;
+}
+
+/** The executor's step count, e.g. "4 executor steps", or "" if it saved no steps. Pure. */
+function stepsFact(c: CujView): string {
+  const steps = c.executor?.ok ? c.executor.data?.steps : null;
+  return Array.isArray(steps) ? count(steps.length, "executor step") : "";
+}
+
+/** The executor session's time, e.g. "took 280.3 s", or "" if unknown. Pure. */
+function tookFact(c: CujView): string {
+  const ms = c.sessions.find(([k]) => k === "executor")?.[1]?.ms;
+  return typeof ms === "number" && Number.isFinite(ms) && ms > 0 ? `took ${fmtMs(ms)}` : "";
+}
+
+/** The files the saved patches change, e.g. "2 files changed", or "" if no patch was saved. Pure. */
+const filesFact = (c: CujView) => (c.patches?.length ? `${count(filesChanged(c.patches), "file")} changed` : "");
+
+/** The executor's reply, short, e.g. "last message: “Done.”", or "" if it saved none. Pure. */
+function replyFact(c: CujView): string {
+  const reply = c.executor?.ok ? c.executor.data?.reply : null;
+  const s = typeof reply === "string" ? shortReply(reply) : "";
+  return s ? `last message: “${s}”` : "";
+}
+
+/**
+ * A CUJ's run facts as plain text, each left out when the saved data lacks it. Pure.
+ *
+ * @param c The CUJ view.
+ * @returns e.g. ["4 executor steps", "took 280.3 s", "0 files changed", "last message: “…”"].
+ */
+const facts = (c: CujView): string[] => [stepsFact(c), tookFact(c), filesFact(c), replyFact(c)].filter(Boolean);
+
+/**
+ * A failed CUJ's "Run facts" block: steps, time, files changed, last message, whichever were saved. Pure.
+ *
+ * @param c The CUJ view.
+ * @returns HTML, or "" if the CUJ did not fail or no fact is known.
+ */
+export function factsHtml(c: CujView): string {
+  const f = failed(c) ? facts(c) : [];
+  if (!f.length) return "";
+  return `<h3>Run facts</h3><ul class="facts">${f.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>`;
+}
+
+/**
+ * A CUJ node's body: run facts if it failed, definition, verdicts and judge errors, steps, reply, sessions. Pure.
  *
  * @param c The CUJ view.
  * @returns HTML.
@@ -152,6 +237,7 @@ export function cujBody(c: CujView): string {
     .flatMap(([k, j]) => (j.ok ? [] : [`<p class="err">${esc(k)}: ${esc(j.error)}</p>`]))
     .join("");
   return (
+    factsHtml(c) +
     defHtml(c) +
     verdictsHtml(c, judges) +
     jerr +

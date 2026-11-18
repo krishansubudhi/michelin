@@ -78,6 +78,7 @@ const emptyCuj = (id: string): CujView => ({
   outcomes: [],
   judges: {},
   sessions: [],
+  patches: [],
 });
 
 /**
@@ -120,10 +121,15 @@ function topFile(view: RunView, path: string, text: string): boolean {
  * @param path Its path in the run, e.g. "chat-name/verdict.json".
  * @param text Its contents.
  * @param raw  Debug list for raw replies.
- * @returns    true if it was recognised and filed.
+ * @returns    true if it was recognised and filed; false for a *.patch / *.diff, which is kept in c().patches and
+ *             still listed with the other files.
  */
 function cujFile(c: () => CujView, path: string, text: string, raw: FileText[]): boolean {
   const name = path.slice(path.indexOf("/") + 1);
+  if (/\.(patch|diff)$/.test(name)) {
+    (c().patches ??= []).push(text);
+    return false;
+  }
   if (name === "executor.json") c().executor = checked<ExecutorResult>(path, tryJson(text), raw);
   else if (name === "verdict.json") {
     const v = tryJson(text);

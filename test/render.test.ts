@@ -200,3 +200,53 @@ test("the run report has a slim grey credit line above the title and a 'Made wit
   assert.match(TAILWIND_CSS, /\.made-top\{[^}]*font-size:var\(--text-xs\)[^}]*color:var\(--color-zinc-400\)/);
   assert.match(TAILWIND_CSS, /\.made\{[^}]*font-size:var\(--text-xs\)[^}]*color:var\(--color-zinc-400\)/);
 });
+
+/** Executor data with 4 steps and a 300-character reply, for the run facts tests. */
+const reply300 = "0123456789".repeat(30);
+const executor4 = () => ({
+  ok: true as const,
+  data: {
+    steps: [1, 2, 3, 4].map((i) => ({ action: `a${i}`, input: `in${i}`, got: `got${i}`, ms: i * 10 })),
+    reply: reply300,
+  },
+});
+
+test("run facts: a failed CUJ starts with its steps, time, files changed and cut last message", () => {
+  const view = liveView();
+  Object.assign(view.cujs[1], {
+    executor: executor4(),
+    sessions: [["executor", { ms: 280311 }]],
+    patches: [""],
+    outcomes: [{ expectation: "is brief", pass: false, votes: {} }],
+  });
+  const html = renderReport(view, now);
+  for (const t of ["4 executor steps", "took 280.3 s", "0 files changed", `last message: “${reply300.slice(0, 200)}…”`])
+    assert.ok(html.includes(t), t);
+  assert.ok(!html.includes(`“${reply300}”`), "the full reply is not in the facts");
+  assert.ok(html.indexOf("<h3>Run facts</h3>") > 0, "has run facts");
+  assert.ok(html.indexOf("<h3>Run facts</h3>") < html.indexOf("<h3>Verdicts</h3>"), "facts come before verdicts");
+});
+
+test("run facts: a CUJ whose expectations all pass has none", () => {
+  const view = liveView();
+  Object.assign(view.cujs[1], {
+    executor: executor4(),
+    sessions: [["executor", { ms: 280311 }]],
+    patches: [""],
+    outcomes: [{ expectation: "says hi", pass: true, votes: {} }],
+  });
+  assert.ok(!renderReport(view, now).includes("Run facts"));
+});
+
+test("run facts: a failed CUJ with no patch or session shows steps and message, never files changed or time", () => {
+  const view = liveView();
+  Object.assign(view.cujs[1], {
+    executor: executor4(),
+    outcomes: [{ expectation: "is brief", pass: false, votes: {} }],
+  });
+  const html = renderReport(view, now);
+  assert.ok(html.includes("<h3>Run facts</h3>"));
+  assert.ok(html.includes("4 executor steps") && html.includes("last message: “"));
+  assert.ok(!html.includes("files changed") && !html.includes("file changed"));
+  assert.ok(!html.includes("took "));
+});

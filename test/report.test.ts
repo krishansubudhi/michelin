@@ -207,3 +207,14 @@ test("the run dir line names the run folder and its llm.log as absolute paths", 
   const cwd = process.cwd();
   assert.equal(runDirLine(".runs/r1"), `run dir: ${cwd}/.runs/r1 (tail -f ${cwd}/.runs/r1/llm.log to follow)`);
 });
+
+test("run facts: a saved patch counts its changed files and is still listed with the other files", () => {
+  const patch = ["diff --git a/x b/x", "--- a/x", "+++ b/x", "@@ -1 +1 @@", "-a", "+b", ""].join("\n");
+  const dir = newRun({ "c1/opencode.patch": patch + patch.replaceAll("x", "y") });
+  const view = loadRun(dir);
+  assert.equal(view.cujs.find((c) => c.id === "c1")?.patches?.length, 1);
+  const html = renderReport(view);
+  assert.ok(html.includes("<h3>Run facts</h3>"));
+  assert.ok(html.includes("2 files changed"));
+  assert.match(html, /<details><summary>c1\/opencode\.patch<\/summary><pre>diff --git a\/x b\/x/);
+});

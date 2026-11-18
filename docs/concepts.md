@@ -17,6 +17,10 @@ flowchart LR
 - A CUJ argument may be a folder: every `*.yaml` directly in it runs, each on a fresh start. Files listed one by one share one run. Only one michelin runs at a time per OS user (`<os temp>/michelin-<user>/run.lock`); point every user's `MICHELIN_TMP` at one shared `chmod 1777` folder to hold one lock across users.
 - Test subjects for the unit and integration tests are in `test/fixtures/subjects/`.
 
+## Black box by default
+
+Michelin tests the subject from the outside, the way a user sees it. The executor talks to it through `howtorun.md` and records what comes back, and the judges score only that evidence. If you want the runner to collect logs or other internals (white box), write that into your CUJ and your `howtorun.md` yourself. Be careful with what you put in evidence: logs can name the model or the subject, and then a blind compare is no longer blind.
+
 ## The must-fail control
 
 Every suite should ship a **must-fail control**: a CUJ the subject handles correctly but whose expectations are deliberately wrong. A healthy judge panel scores it `passed 0/n`. If a control ever passes, the judges are rubber-stamping and the rest of that run can't be trusted.
