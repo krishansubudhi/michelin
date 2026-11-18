@@ -211,7 +211,7 @@ const executor4 = () => ({
   },
 });
 
-test("run facts: a failed CUJ starts with its steps, time, files changed and cut last message", () => {
+test("run facts: a failed CUJ starts with its steps, time, files changed and cut executor's summary", () => {
   const view = liveView();
   Object.assign(view.cujs[1], {
     executor: executor4(),
@@ -220,7 +220,12 @@ test("run facts: a failed CUJ starts with its steps, time, files changed and cut
     outcomes: [{ expectation: "is brief", pass: false, votes: {} }],
   });
   const html = renderReport(view, now);
-  for (const t of ["4 executor steps", "took 280.3 s", "0 files changed", `last message: “${reply300.slice(0, 200)}…”`])
+  for (const t of [
+    "4 executor steps",
+    "took 280.3 s",
+    "0 files changed",
+    esc(`executor's summary: “${reply300.slice(0, 200)}…”`),
+  ])
     assert.ok(html.includes(t), t);
   assert.ok(!html.includes(`“${reply300}”`), "the full reply is not in the facts");
   assert.ok(html.indexOf("<h3>Run facts</h3>") > 0, "has run facts");
@@ -238,7 +243,7 @@ test("run facts: a CUJ whose expectations all pass has none", () => {
   assert.ok(!renderReport(view, now).includes("Run facts"));
 });
 
-test("run facts: a failed CUJ with no patch or session shows steps and message, never files changed or time", () => {
+test("run facts: a failed CUJ with no patch or session shows steps and summary, never files changed or time", () => {
   const view = liveView();
   Object.assign(view.cujs[1], {
     executor: executor4(),
@@ -246,7 +251,7 @@ test("run facts: a failed CUJ with no patch or session shows steps and message, 
   });
   const html = renderReport(view, now);
   assert.ok(html.includes("<h3>Run facts</h3>"));
-  assert.ok(html.includes("4 executor steps") && html.includes("last message: “"));
+  assert.ok(html.includes("4 executor steps") && html.includes(esc("executor's summary: “")));
   assert.ok(!html.includes("files changed") && !html.includes("file changed"));
   assert.ok(!html.includes("took "));
 });

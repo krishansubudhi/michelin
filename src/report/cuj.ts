@@ -197,23 +197,23 @@ function tookFact(c: CujView): string {
 /** The files the saved patches change, e.g. "2 files changed", or "" if no patch was saved. Pure. */
 const filesFact = (c: CujView) => (c.patches?.length ? `${count(filesChanged(c.patches), "file")} changed` : "");
 
-/** The executor's reply, short, e.g. "last message: “Done.”", or "" if it saved none. Pure. */
+/** The executor's reply, short, e.g. "executor's summary: “Done.”", or "" if it saved none. Pure. */
 function replyFact(c: CujView): string {
   const reply = c.executor?.ok ? c.executor.data?.reply : null;
   const s = typeof reply === "string" ? shortReply(reply) : "";
-  return s ? `last message: “${s}”` : "";
+  return s ? `executor's summary: “${s}”` : "";
 }
 
 /**
  * A CUJ's run facts as plain text, each left out when the saved data lacks it. Pure.
  *
  * @param c The CUJ view.
- * @returns e.g. ["4 executor steps", "took 280.3 s", "0 files changed", "last message: “…”"].
+ * @returns e.g. ["4 executor steps", "took 280.3 s", "0 files changed", "executor's summary: “…”"].
  */
 const facts = (c: CujView): string[] => [stepsFact(c), tookFact(c), filesFact(c), replyFact(c)].filter(Boolean);
 
 /**
- * A failed CUJ's "Run facts" block: steps, time, files changed, last message, whichever were saved. Pure.
+ * A failed CUJ's "Run facts" block: steps, time, files changed, executor's summary, whichever were saved. Pure.
  *
  * @param c The CUJ view.
  * @returns HTML, or "" if the CUJ did not fail or no fact is known.
