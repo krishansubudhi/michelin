@@ -4,7 +4,15 @@
 
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![node >=22.18](https://img.shields.io/badge/node-%3E%3D22.18-brightgreen)](https://nodejs.org)
 
-![A Michelin report: pass rate, cost, and each step of one OpenCode run](docs/report.png)
+**Evaluate one agent**
+
+![A Michelin run report: OpenCode on Qwen 3.8 27B, one SWE-bench Lite task, pass rate, cost and each step](docs/run-report.png)
+
+**Compare two**
+
+![A Michelin compare report: Qwen 3.8 27B beats Gemma 4 26B 4-0-1 on five SWE-bench Lite tasks, judged blind](docs/compare-report.png)
+
+OpenCode on Qwen 3.8 27B vs Gemma 4 26B, five SWE-bench Lite tasks, judged blind to the tests: [results](subjects/opencode/RESULTS.md), [reproduce it](subjects/opencode/README.md).
 
 ## Why it is different
 
@@ -16,6 +24,8 @@
 ## Quickstart
 
 Needs Node 22.18+, `git`, `python3` (for the toy subject) and the [`claude` CLI](https://docs.anthropic.com/en/docs/claude-code), logged in. Every role is a `claude -p` call, so runs use your Claude plan or API credit.
+
+**Safety.** Every role runs `claude -p --permission-mode bypassPermissions`: it can run any command and edit any file your user can, with no prompt. Run subjects you don't trust in a sandbox or a VM.
 
 ```sh
 npm install -g github:krishansubudhi/michelin   # installs the `michelin` command
@@ -33,6 +43,14 @@ total: 1/2 CUJs passed
 ```
 
 `toy-name` is the must-fail control: the toy always answers "USA", so a healthy judge fails "The reply says Alice". Each CUJ leaves `.runs/<runid>/report.html`.
+
+**Roles.**
+
+- **executor**: Michelin's agent. It carries out the CUJ against your program and records the evidence (`--executor`).
+- **judges**: score that evidence against the CUJ's expectations (`--judges`); in `michelin compare` they pick the better run.
+- **agent under test**: the subject. Its own model is the subject's setting (e.g. `OPENCODE_MODEL` for OpenCode), never `--executor`.
+
+`michelin --help` gives an overview; `michelin run --help`, `michelin compare --help` and `michelin init --help` give each command's flags and an example.
 
 **Settings.** Flags override `./michelin.json`, which overrides the built-in defaults. For example, `michelin run --runs 3` runs every CUJ three times. Every key, flag and environment variable: [docs/settings.md](docs/settings.md).
 
@@ -54,13 +72,24 @@ expectations:
   - The reply says USA.
 ```
 
-For an A/B, run the same CUJ twice with one thing changed (here the executor's model; for OpenCode, `OPENCODE_MODEL`), then blind judges pick the better run. Each `michelin run` prints its `run dir:`.
+An A/B compares two versions of the agent under test, with the executor and the judges kept the same. The toy has two: `TOY_VARIANT=v1` (the default) answers, `TOY_VARIANT=v2` is a broken build that replies "I am not sure". Run the same CUJ on each, then blind judges pick the better run. Each `michelin run` prints its `run dir:`.
 
 ```sh
-michelin run subjects/toy subjects/toy/cujs/toy/country.yaml --model claude-haiku-5-5
-michelin run subjects/toy subjects/toy/cujs/toy/country.yaml --model claude-sonnet-5-5
-michelin compare haiku=.runs/<first run id> sonnet=.runs/<second run id>
+TOY_VARIANT=v1 michelin run subjects/toy subjects/toy/cujs/toy/country.yaml
+TOY_VARIANT=v2 michelin run subjects/toy subjects/toy/cujs/toy/country.yaml
+michelin compare v1=.runs/<first run id> v2=.runs/<second run id>
 ```
+
+v1 passes 2/2 and v2 1/2, and the compare picks v1 in both orders:
+
+```
+| run | W-L-T | win rate | Elo |
+| --- | --- | --- | --- |
+| v1 | 1-0-0 | 100% | 1016 |
+| v2 | 0-1-0 | 0% | 984 |
+```
+
+For your own agent, the two versions are whatever you are testing: two builds, two prompts, or two models set through the subject (for OpenCode, `OPENCODE_MODEL`).
 
 More: [Write a subject](docs/write-a-subject.md), [Compare](docs/compare.md).
 

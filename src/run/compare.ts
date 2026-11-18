@@ -23,6 +23,7 @@ import { judgePair, type Evidence, type PairVerdict, type Task } from "../llm/pa
 import { identifiers } from "../llm/scrub.ts";
 import { compareHtml } from "../report/compare-html.ts";
 import { fmtUsd } from "../report/html.ts";
+import { reportUrl } from "../report/report.ts";
 import type { Loose } from "../report/view.ts";
 import { UsageError } from "./cli.ts";
 import { loadConfig, type Tiebreak } from "./settings.ts";
@@ -373,6 +374,8 @@ export async function compareMain(
   );
   writeFileSync(join(out, "compare.md"), compareMd(rows, games, costUsd, ms));
   writeFileSync(join(out, "report.html"), compareHtml(rows, games, costUsd, ms));
-  console.log(`${table(rows)}\n\n${games.length} game(s), total judge cost ${fmtUsd(costUsd)}\ncompare dir: ${out}`);
+  console.log(
+    `${table(rows)}\n\n${games.length} game(s), total judge cost ${fmtUsd(costUsd)}\ncompare dir: ${resolve(out)}\n${reportUrl(out)}`,
+  );
   return { out, rows, games, costUsd };
 }

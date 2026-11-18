@@ -222,6 +222,14 @@ export function loadRun(dir: string): RunView {
 export const reportUrl = (dir: string) => pathToFileURL(resolve(dir, "report.html")).href;
 
 /**
+ * The line a run prints first: its folder and llm.log, both as absolute paths. Pure (reads only the cwd).
+ *
+ * @param dir The run folder, e.g. ".runs/2026-11-10T02-58-00-000Z".
+ * @returns   e.g. "run dir: /home/me/proj/.runs/2026-11-10T02-58-00-000Z (tail -f /home/me/proj/.runs/.../llm.log to follow)".
+ */
+export const runDirLine = (dir: string) => `run dir: ${resolve(dir)} (tail -f ${resolve(dir, "llm.log")} to follow)`;
+
+/**
  * Write dir/report.html for a run folder. Never throws: on any error it writes a minimal page, and if
  * even that fails it gives up silently (the runner calls this in a finally).
  *

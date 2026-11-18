@@ -25,7 +25,7 @@ import { readFileSync, writeFileSync, mkdirSync, appendFileSync } from "node:fs"
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadConfig, type Settings } from "./settings.ts";
-import { USAGE, parseCli, pickTargets, runMain } from "./cli.ts";
+import { helpText, parseCli, pickTargets, runMain } from "./cli.ts";
 import { PKG_ROOT, init } from "./init.ts";
 import { llm, claudeVersion, toSession, type Llm, type Pick, type Session } from "../llm/models.ts";
 import { judgeCuj } from "../llm/judge.ts";
@@ -40,7 +40,7 @@ import {
   type ExecutorResult,
   type Teardown,
 } from "../llm/schemas.ts";
-import { reportUrl, writeReport } from "../report/report.ts";
+import { reportUrl, runDirLine, writeReport } from "../report/report.ts";
 import { checkUniqueIds, cujId, expandCujs, loadCuj, resolveArg, runGroups, type Cuj } from "./cujs.ts";
 import { playNote, seedNote, sharedGiven, unseeded, type Given } from "./given.ts";
 import { exitCode, summary } from "./summary.ts";
@@ -346,7 +346,7 @@ export async function runSubject(ctx: Ctx, subject: string, cujs: (readonly [str
 async function runOnce(subject: string, settings: Settings, cujs: (readonly [string, Cuj])[]): Promise<Run> {
   const dir = join(".runs", new Date().toISOString().replace(/[:.]/g, "-"));
   mkdirSync(dir, { recursive: true });
-  console.log(`run dir: ${dir} (tail -f ${join(dir, "llm.log")} to follow)`);
+  console.log(runDirLine(dir));
   const read = (f: string) => readFileSync(join(subject, f), "utf8");
   const logPath = join(dir, "llm.log"); // CLI stderr (and stdout on failure) plus a start/end line per call, for tail -f
   const log = (line: string) => appendFileSync(logPath, `${new Date().toISOString()} ${line}\n`);
@@ -373,7 +373,7 @@ async function runOnce(subject: string, settings: Settings, cujs: (readonly [str
  */
 async function main() {
   const args = parseCli(process.argv.slice(2));
-  if (!args) return console.log(USAGE);
+  if (args.command === "help") return console.log(helpText(args.topic));
   if (args.command === "init") return void init(process.cwd(), PKG_ROOT);
   if (args.command === "compare") return void (await (await import("./compare.ts")).compareMain(args, llm));
   const settingsPath = args.settingsPath && resolveArg(args.settingsPath);

@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
-import { isBinary, loadRun, reportUrl, writeReport } from "../src/report/report.ts";
+import { isBinary, loadRun, reportUrl, runDirLine, writeReport } from "../src/report/report.ts";
 import { esc } from "../src/report/html.ts";
 import { renderReport } from "../src/report/render.ts";
 
@@ -201,4 +201,9 @@ test("costs add up into a tile; a scratch session's resume hint changes folder f
 test("the report path is printed as a clickable file:// URL", () => {
   assert.equal(reportUrl("/a b/.runs/r1"), "file:///a%20b/.runs/r1/report.html");
   assert.match(reportUrl(".runs/r1"), /^file:\/\/\/.*\/\.runs\/r1\/report\.html$/);
+});
+
+test("the run dir line names the run folder and its llm.log as absolute paths", () => {
+  const cwd = process.cwd();
+  assert.equal(runDirLine(".runs/r1"), `run dir: ${cwd}/.runs/r1 (tail -f ${cwd}/.runs/r1/llm.log to follow)`);
 });

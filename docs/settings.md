@@ -32,7 +32,7 @@ Any subset of these keys. An unknown or mistyped key is an error.
 `michelin run`:
 
 - `<subject> <cuj> [cuj ...]`: names them, overriding `subject` and `cujs` (give both, or neither). The word `run` is optional.
-- `--model m[@effort]`: the executor's model, e.g. `claude-sonnet-5-5@high`. Its effort is kept unless given.
+- `--executor m[@effort]`: the executor's model (Michelin's own agent, not the agent under test), e.g. `claude-sonnet-5-5@high`. Its effort is kept unless given.
 - `--judges a,b[@effort]`: the judge list, e.g. `claude-opus-5-5,claude-sonnet-5-5@medium`. Effort is `high` unless given.
 - `--runs n`: repeats every CUJ n times (a whole number, 1 or more).
 - `--settings file`: reads this file instead of `./michelin.json`.
@@ -41,12 +41,14 @@ Any subset of these keys. An unknown or mistyped key is an error.
 
 `michelin compare` takes `--judges`, `--tiebreak speed|none`, `--settings` and `--hide tok` (repeatable; also scrubs `tok` from what the judges see). See [compare.md](compare.md).
 
+Each command prints its own flags and an example: `michelin run --help`, `michelin compare --help`, `michelin init --help`.
+
 ## Environment variables
 
 - `MICHELIN_SUBJECTS`: colon-separated folders. A subject, CUJ or `--settings` path that does not exist as given is looked up under each, e.g. `MICHELIN_SUBJECTS=~/my-subjects michelin my-app my-app/cujs/smoke/`.
 - `MICHELIN_TMP`: the folder for the run lock and scratch space, instead of the per-user `<os temp>/michelin-<user>` (e.g. `/tmp/michelin-jarvis`). Only one michelin runs at a time per lock folder; to hold one lock across OS users, point every user's `MICHELIN_TMP` at one shared folder made `chmod 1777`.
 
-A subject can read its own environment variables in setup.md. Every role inherits the environment michelin runs in, so export them before `michelin run`. The OpenCode subject (`subjects/opencode`) reads:
+A subject can read its own environment variables in setup.md. Every role inherits the environment michelin runs in, so export them before `michelin run`. The toy subject reads `TOY_VARIANT`: `v1` (the default) answers, `v2` is a broken build, for trying an A/B ([compare.md](compare.md)). The OpenCode subject (`subjects/opencode`) reads:
 
 - `OPENCODE_MODEL` (required): OpenCode's model in `provider/model` form, e.g. `ollama/<model>`.
 - `OLLAMA_API_BASE`: the Ollama server, default `http://localhost:11434`.

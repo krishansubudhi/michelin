@@ -1,6 +1,6 @@
 {
   "name": "michelin-eval",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Eval harness for AI agents: describe user journeys in plain words, LLM judges score the evidence.",
   "license": "MIT",
   "keywords": [

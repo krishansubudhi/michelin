@@ -88,19 +88,23 @@ test("no file and no flags: the defaults, no subject, no CUJs, one run", () => {
   });
 });
 
-test("a partial file overrides only its fields; flags override the file", () => {
+test("a partial file overrides only its fields; flags (--executor, --judges, --runs) override the file", () => {
   const file = { executor: o, subject: "subjects/toy", cujs: ["subjects/toy/cujs/toy/"], runs: 2 };
   const c = resolved(file);
   const want = { settings: { ...defaults, executor: o }, subject: "subjects/toy", cujs: file.cujs, runs: 2 };
   assert.deepEqual(c, { ...want, pairJudges: 1, tiebreak: "speed" });
-  const f = resolved(file, { model: "claude-sonnet-5-5", judges: "claude-opus-5-5,claude-sonnet-5-5@medium", runs: 5 });
+  const f = resolved(file, {
+    executor: "claude-sonnet-5-5",
+    judges: "claude-opus-5-5,claude-sonnet-5-5@medium",
+    runs: 5,
+  });
   assert.deepEqual(f.settings.executor, { model: "claude-sonnet-5-5", effort: "high" }, "keeps the file's effort");
   assert.deepEqual(f.settings.judge, [o, s5], "effort high unless given");
   assert.equal(f.runs, 5);
-  assert.deepEqual(resolved({}, { model: "x@low" }).settings.executor, { model: "x", effort: "low" });
+  assert.deepEqual(resolved({}, { executor: "x@low" }).settings.executor, { model: "x", effort: "low" });
 });
 
-test("a bad file field or flag is refused, naming the file and the field", () => {
+test("a bad file field or flag is refused, naming the file and the field (--executor)", () => {
   const bad: [unknown, RegExp][] = [
     [{ judges: [o] }, /michelin.json: unknown field "judges"/],
     [{ runs: 0 }, /michelin.json: field "runs"/],
@@ -114,7 +118,7 @@ test("a bad file field or flag is refused, naming the file and the field", () =>
     [[], /michelin.json: must be a JSON object/],
   ];
   for (const [file, re] of bad) assert.throws(() => resolved(file), re);
-  assert.throws(() => resolved({}, { model: "m@huge" }), /--model/);
+  assert.throws(() => resolved({}, { executor: "m@huge" }), /--executor/);
   assert.throws(() => resolved({}, { judges: "a,@high" }), /--judges/);
 });
 

@@ -5,7 +5,7 @@
 // Test: node --test test/init.test.ts
 
 import { cpSync, existsSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /** This package's root folder, e.g. "/x/node_modules/michelin-eval/"; holds subjects/toy. */
@@ -24,15 +24,15 @@ export function starter(): string {
 /**
  * Make `path` unless it already exists.
  *
- * @param path The file or folder, e.g. "/proj/michelin.json".
- * @param done What to report once made, e.g. "wrote michelin.json".
+ * @param path The file or folder, absolute, e.g. "/proj/michelin.json".
+ * @param verb What to report once made, e.g. "wrote".
  * @param make Makes it, e.g. () => writeFileSync(path, text).
- * @returns    `done`, or "kept existing <name>" if it was there, e.g. "kept existing michelin.json".
+ * @returns    "<verb> <path>", or "kept existing <path>" if it was there, e.g. "kept existing /proj/michelin.json".
  */
-function unlessExists(path: string, done: string, make: () => void): string {
-  if (existsSync(path)) return `kept existing ${done.split(" ")[1]}`;
+function unlessExists(path: string, verb: string, make: () => void): string {
+  if (existsSync(path)) return `kept existing ${path}`;
   make();
-  return done;
+  return `${verb} ${path}`;
 }
 
 /**
@@ -40,14 +40,17 @@ function unlessExists(path: string, done: string, make: () => void): string {
  *
  * @param cwd     The project folder, e.g. process.cwd().
  * @param pkgRoot The michelin package's root, holding subjects/toy, e.g. PKG_ROOT.
- * @returns       The lines it printed, e.g. ["wrote michelin.json", "kept existing subjects/toy", "next: ..."].
+ * @returns       The lines it printed, paths absolute, e.g. ["wrote /proj/michelin.json", "kept existing /proj/subjects/toy",
+ *                "next: michelin run"].
  */
 export function init(cwd: string, pkgRoot: string): string[] {
-  const config = join(cwd, "michelin.json");
-  const toy = join(cwd, "subjects", "toy");
+  const config = resolve(cwd, "michelin.json");
+  const toy = resolve(cwd, "subjects", "toy");
   const lines = [
-    unlessExists(config, "wrote michelin.json", () => writeFileSync(config, starter(), { flag: "wx" })),
-    unlessExists(toy, "copied subjects/toy", () => cpSync(join(pkgRoot, "subjects", "toy"), toy, { recursive: true })),
+    unlessExists(config, "wrote", () => writeFileSync(config, starter(), { flag: "wx" })),
+    unlessExists(toy, "copied the toy subject to", () =>
+      cpSync(join(pkgRoot, "subjects", "toy"), toy, { recursive: true }),
+    ),
     "next: michelin run",
   ];
   for (const l of lines) console.log(l);

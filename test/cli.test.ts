@@ -1,26 +1,29 @@
 // Tests for cli.ts, no LLM: node --test test/cli.test.ts  (or npm test)
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { NO_CUJS, UsageError, parseCli, pickTargets } from "../src/run/cli.ts";
+import { NO_CUJS, UsageError, helpText, parseCli, pickTargets } from "../src/run/cli.ts";
 
 const usage = (re: RegExp | string) => (e: unknown) =>
   e instanceof UsageError && (typeof re === "string" ? e.message === re : re.test(e.message));
 
-test("the command line: subject, CUJs, --settings, --all-judges, --baseline and --help", () => {
+test("the command line: subject, CUJs, --settings, --all-judges, --baseline, and --help naming its command", () => {
   assert.deepEqual(parseCli(["s", "a.yaml", "b.yaml"]), {
     command: "run",
     subject: "s",
     picked: ["a.yaml", "b.yaml"],
     settingsPath: undefined,
     judging: { all: false, baselines: [] },
-    flags: { model: undefined, judges: undefined, runs: undefined },
+    flags: { executor: undefined, judges: undefined, runs: undefined },
   });
   const j = parseCli(["--all-judges", "--baseline", "r1", "--baseline", "r2", "s", "a.yaml"]);
   assert.deepEqual(j?.command === "run" && j.judging, { all: true, baselines: ["r1", "r2"] });
   assert.equal(parseCli(["--settings", "x.json", "s", "a.yaml"])?.settingsPath, "x.json");
   assert.equal(parseCli(["--settings=x.json", "s", "a.yaml"])?.settingsPath, "x.json");
-  assert.equal(parseCli(["--help"]), null);
-  assert.equal(parseCli(["-h", "s"]), null);
+  assert.deepEqual(parseCli(["--help"]), { command: "help", topic: undefined });
+  assert.deepEqual(parseCli(["-h", "s"]), { command: "help", topic: undefined });
+  assert.deepEqual(parseCli(["run", "-h"]), { command: "help", topic: "run" });
+  assert.deepEqual(parseCli(["compare", "--help"]), { command: "help", topic: "compare" });
+  assert.deepEqual(parseCli(["init", "--help"]), { command: "help", topic: "init" });
   assert.throws(() => parseCli(["--bogus", "s"]), /Unknown option/);
 });
 
@@ -39,9 +42,11 @@ test("subject and CUJs may be left out: michelin.json supplies them", () => {
   assert.deepEqual(a?.command === "run" && [a.subject, a.picked], [undefined, []]);
 });
 
-test("--model, --judges and --runs land in flags; --runs must be a whole number >= 1", () => {
-  const a = parseCli(["run", "--model", "m@high", "--judges", "a,b@low", "--runs", "3"]);
-  assert.deepEqual(a?.flags, { model: "m@high", judges: "a,b@low", runs: 3 });
+test("--executor (or its old name --model), --judges and --runs land in flags; --runs is a whole number >= 1", () => {
+  const a = parseCli(["run", "--executor", "m@high", "--judges", "a,b@low", "--runs", "3"]);
+  assert.deepEqual(a?.command === "run" && a.flags, { executor: "m@high", judges: "a,b@low", runs: 3 });
+  const m = parseCli(["run", "--model", "m@high"]);
+  assert.equal(m?.command === "run" && m.flags.executor, "m@high");
   for (const bad of ["0", "-1", "1.5", "two", ""])
     assert.throws(() => parseCli([`--runs=${bad}`, "s", "a.yaml"]), usage(/--runs must be a whole number/));
 });
@@ -78,4 +83,18 @@ test("michelin compare: two or more runs (dir or name=dir), --judges, --tiebreak
   assert.throws(() => parseCli(["compare", "--tiebreak", "x", "a", "b"]), usage(/--tiebreak must be speed or none/));
   assert.throws(() => parseCli(["compare"]), usage(/got 0/));
   assert.throws(() => parseCli(["--hide", "x", "s", "a.yaml"]), usage(/only for michelin compare/));
+});
+
+test("each command's help shows only its own flags and one example; the overview has the roles", () => {
+  const run = helpText("run");
+  assert.ok(run.includes("--executor") && run.includes("example:") && !run.includes("--model"));
+  const compare = helpText("compare");
+  assert.ok(compare.includes("--tiebreak") && compare.includes("example:"));
+  assert.ok(!compare.includes("--runs") && !compare.includes("--executor"));
+  const init = helpText("init");
+  assert.ok(init.includes("example:") && !init.includes("--judges"));
+  const all = helpText();
+  for (const s of ["Roles:", "executor", "judges", "agent under test", "michelin run --help"])
+    assert.ok(all.includes(s), s);
+  for (const t of [run, compare, init, all]) for (const l of t.split("\n")) assert.ok(l.length <= 120, l);
 });

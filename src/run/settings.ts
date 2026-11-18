@@ -1,5 +1,5 @@
 // Settings: which model plays each role, and at what effort, plus the run's subject, CUJs and repeat count.
-// Each top-level field comes from the first that has it: command-line flags (--model, --judges, --runs), then
+// Each top-level field comes from the first that has it: command-line flags (--executor, --judges, --runs), then
 // ./michelin.json (or the file given with --settings <file> instead), then the built-in defaults/settings.json in
 // this package (found from import.meta.url, never the current folder). michelin.json may hold any subset of the
 // roles below plus subject (string), cujs (list of strings), runs (whole number >= 1) and pair_judges (whole
@@ -102,8 +102,8 @@ export function loadSettings(path = DEFAULTS, judging?: Judging): Settings {
   return judging ? { ...(s as Settings), judging } : (s as Settings);
 }
 
-/** What the command line may set: --model "m" or "m@effort", --judges "a,b@effort", --runs N. */
-export type Flags = { model?: string; judges?: string; runs?: number; tiebreak?: Tiebreak };
+/** What the command line may set: --executor "m" or "m@effort", --judges "a,b@effort", --runs N. */
+export type Flags = { executor?: string; judges?: string; runs?: number; tiebreak?: Tiebreak };
 
 /** How `michelin compare` breaks a judged tie: "speed" (the run 1.5x faster or more wins) or "none". */
 export type Tiebreak = "speed" | "none";
@@ -154,11 +154,11 @@ function checkField(k: string, v: unknown, path: string): void {
 }
 
 /**
- * Parse a --model or --judges entry.
+ * Parse an --executor or --judges entry.
  *
  * @param s      "model" or "model@effort", e.g. "claude-sonnet-5-5@high".
  * @param effort The effort when none is given, e.g. "medium".
- * @param flag   The flag it came from, named in the error, e.g. "--model".
+ * @param flag   The flag it came from, named in the error, e.g. "--executor".
  * @returns      The pick, e.g. {model: "claude-sonnet-5-5", effort: "high"}.
  * @throws       If the model is empty or the effort isn't one of EFFORTS.
  */
@@ -194,7 +194,7 @@ function extras(f: Record<string, unknown>, flags: Flags): Omit<Config, "setting
  *
  * @param defaults The built-in settings, e.g. loadSettings() of defaults/settings.json.
  * @param file     The parsed michelin.json (or --settings file), any subset of fields, e.g. {runs: 2, pair_judges: 3}; {} if none.
- * @param flags    From the command line, e.g. {model: "claude-sonnet-5-5@high", judges: "claude-opus-5-5", runs: 3}.
+ * @param flags    From the command line, e.g. {executor: "claude-sonnet-5-5@high", judges: "claude-opus-5-5", runs: 3}.
  * @param path     The file, named in every error, e.g. "michelin.json".
  * @returns        The merged config; settings carry no judging (loadConfig adds it).
  * @throws         If the file isn't an object, holds an unknown or mistyped field, or a flag entry is malformed.
@@ -207,7 +207,7 @@ export function resolveSettings(defaults: Settings, file: unknown, flags: Flags,
   const roles = Object.fromEntries(
     FIELDS.map((k) => [k, Object.hasOwn(f, k) ? f[k] : defaults[k as keyof Settings]]),
   ) as Settings;
-  if (flags.model) roles.executor = parsePick(flags.model, roles.executor.effort, "--model");
+  if (flags.executor) roles.executor = parsePick(flags.executor, roles.executor.effort, "--executor");
   if (flags.judges) roles.judge = flags.judges.split(",").map((j) => parsePick(j, "high", "--judges"));
   checkFields(roles, path);
   return { settings: roles, ...extras(f, flags) };
