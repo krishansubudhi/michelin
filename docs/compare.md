@@ -20,3 +20,7 @@ Every pair of runs meets on every CUJ that both ran (a round robin). The judges 
 - `<cuj>/<x>-vs-<y>/`: the exact prompts the judges saw, plus each judge's raw verdicts.
 
 At the end, the table, the total cost and the output folder are printed.
+
+Speed counts too. Each game records both runs' program time (the sum of the executor's measured step `ms`), shown in a
+per-CUJ time table in compare.md and on each game in report.html. A judged tie goes to the run that took 1.5x less time
+or better (`--tiebreak speed`, the default); `--tiebreak none` or `"tiebreak": "none"` in michelin.json keeps it a tie.

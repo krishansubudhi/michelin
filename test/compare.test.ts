@@ -3,10 +3,20 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { compareMain, loadSide, parseRunArg, roundRobin, standings, type Game } from "../src/run/compare.ts";
+import {
+  compareMain,
+  loadSide,
+  parseRunArg,
+  roundRobin,
+  speedBreak,
+  standings,
+  stepMs,
+  timeTable,
+  type Game,
+} from "../src/run/compare.ts";
 import type { LlmOpts, Pick } from "../src/llm/models.ts";
 
 /** A fake LlmResult carrying `data` as the structured output. */
@@ -157,4 +167,26 @@ test("compareMain: unnamed runs of one subject get #n; the panel is the first pa
     compareMain({ runs: [`a=${runs[0]}`, `a=${runs[1]}`], flags: {}, hide: [] }, fakeJudge([]), cwd),
     /both named "a"/,
   );
+});
+
+test("speedBreak: a judged tie goes to the run 1.5x faster; close times, none or a real win stay", () => {
+  assert.deepEqual(speedBreak("tie", { a: 1000, b: 1600 }, "speed"), { winner: "a", bySpeed: true });
+  assert.deepEqual(speedBreak("tie", { a: 3000, b: 2000 }, "speed"), { winner: "b", bySpeed: true });
+  assert.deepEqual(speedBreak("tie", { a: 1000, b: 1400 }, "speed"), { winner: "tie", bySpeed: false });
+  assert.deepEqual(speedBreak("tie", { a: 1000, b: 9000 }, "none"), { winner: "tie", bySpeed: false });
+  assert.deepEqual(speedBreak("tie", { a: 1000 }, "speed"), { winner: "tie", bySpeed: false });
+  assert.deepEqual(speedBreak("b", { a: 1000, b: 9000 }, "speed"), { winner: "b", bySpeed: false });
+});
+
+test("stepMs sums the executor steps' ms; timeTable shows seconds and marks a speed win", (t) => {
+  const dir = mkdtempSync(join(tmpdir(), "michelin-ms-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  writeFileSync(
+    join(dir, "executor.json"),
+    JSON.stringify({ ok: true, data: { steps: [{ ms: 1200 }, { ms: 300 }, {}] } }),
+  );
+  assert.equal(stepMs(dir), 1500);
+  assert.equal(stepMs(join(dir, "none")), undefined);
+  const g: Game = { cuj: "c", a: "x", b: "y", winner: "a", judges: {}, ms: { a: 1500 }, bySpeed: true };
+  assert.match(timeTable([g]), /\| c \| x \| y \| 1\.5 s \| \? \| x \(speed\) \|/);
 });

@@ -26,6 +26,7 @@ function named(g: Game, letter: string | null, aIs: "A" | "B"): string {
  * @returns HTML.
  */
 function gameHtml(g: Game): string {
+  const secs = (ms?: number) => (ms === undefined ? "?" : `${(ms / 1000).toFixed(1)} s`);
   const won = g.winner === null ? "no valid verdict" : g.winner === "tie" ? "tie" : g.winner === "a" ? g.a : g.b;
   const judges = Object.entries(g.judges).map(
     ([m, v]) =>
@@ -34,7 +35,8 @@ function gameHtml(g: Game): string {
       `<li>${esc(g.a)} shown as B: ${esc(named(g, v.ba, "B"))}. ${esc(v.whyBA)}</li></ul></li>`,
   );
   return (
-    `<details open><summary>${esc(g.cuj)}: ${esc(g.a)} vs ${esc(g.b)} · winner ${esc(won)}</summary>` +
+    `<details open><summary>${esc(g.cuj)}: ${esc(g.a)} vs ${esc(g.b)} · winner ${esc(won)}` +
+    `${g.bySpeed ? " (judges tied; faster run)" : ""} · ${esc(g.a)} ${secs(g.ms?.a)}, ${esc(g.b)} ${secs(g.ms?.b)}</summary>` +
     `<ul>${judges.join("")}</ul></details>`
   );
 }

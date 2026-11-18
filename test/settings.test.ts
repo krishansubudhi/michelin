@@ -78,14 +78,21 @@ const defaults = { constructor: h, executor: s5, destructor: h, judge: [o] } as 
 const resolved = (file: unknown, flags = {}) => resolveSettings(defaults, file, flags, "michelin.json");
 
 test("no file and no flags: the defaults, no subject, no CUJs, one run", () => {
-  assert.deepEqual(resolved({}), { settings: defaults, subject: undefined, cujs: [], runs: 1, pairJudges: 1 });
+  assert.deepEqual(resolved({}), {
+    settings: defaults,
+    subject: undefined,
+    cujs: [],
+    runs: 1,
+    pairJudges: 1,
+    tiebreak: "speed",
+  });
 });
 
 test("a partial file overrides only its fields; flags override the file", () => {
   const file = { executor: o, subject: "subjects/toy", cujs: ["subjects/toy/cujs/toy/"], runs: 2 };
   const c = resolved(file);
   const want = { settings: { ...defaults, executor: o }, subject: "subjects/toy", cujs: file.cujs, runs: 2 };
-  assert.deepEqual(c, { ...want, pairJudges: 1 });
+  assert.deepEqual(c, { ...want, pairJudges: 1, tiebreak: "speed" });
   const f = resolved(file, { model: "claude-sonnet-5-5", judges: "claude-opus-5-5,claude-sonnet-5-5@medium", runs: 5 });
   assert.deepEqual(f.settings.executor, { model: "claude-sonnet-5-5", effort: "high" }, "keeps the file's effort");
   assert.deepEqual(f.settings.judge, [o, s5], "effort high unless given");
@@ -127,6 +134,8 @@ test("loadConfig reads ./michelin.json when present, or the --settings file inst
 test("pair_judges: default 1, else michelin.json's whole number", () => {
   assert.equal(resolved({}).pairJudges, 1);
   assert.equal(resolved({ pair_judges: 3 }).pairJudges, 3);
+  assert.equal(resolved({ tiebreak: "none" }).tiebreak, "none");
+  assert.throws(() => resolved({ tiebreak: "fast" }), /tiebreak/);
   const cwd = mkdtempSync(join(tmpdir(), "config-"));
   assert.equal(loadConfig({ flags: {}, cwd }).pairJudges, 1, "no michelin.json");
   writeFileSync(join(cwd, "michelin.json"), JSON.stringify({ pair_judges: 2 }));

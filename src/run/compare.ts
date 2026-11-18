@@ -23,14 +23,14 @@ import { compareHtml } from "../report/compare-html.ts";
 import { fmtUsd } from "../report/html.ts";
 import type { Loose } from "../report/view.ts";
 import { UsageError } from "./cli.ts";
-import { loadConfig } from "./settings.ts";
+import { loadConfig, type Tiebreak } from "./settings.ts";
 
 /** One run in a comparison: its name, folder, identifiers to hide, and per CUJ id its evidence and task. */
 export type Side = {
   name: string;
   dir: string;
   ids: string[];
-  cujs: Record<string, { evidence: Evidence; task: Task }>;
+  cujs: Record<string, { evidence: Evidence; task: Task; ms?: number }>;
 };
 
 /** One game: two runs (by name) on one CUJ, the panel's winner (null: no valid verdict) and each judge's verdicts. */
@@ -40,6 +40,10 @@ export type Game = {
   b: string;
   winner: "a" | "b" | "tie" | null;
   judges: Record<string, PairVerdict>;
+  /** Each run's program time on this CUJ in ms (sum of its executor steps' ms), when known, e.g. {a: 4200, b: 9100}. */
+  ms?: { a?: number; b?: number };
+  /** True when the judges tied and the speed tiebreak gave the game to the faster run. */
+  bySpeed?: boolean;
 };
 
 /** One run's standing: wins, losses, ties, decided games, win rate (wins + ties/2 over decided games) and Elo. */
@@ -96,6 +100,37 @@ function cujIds(dir: string, run: Loose): string[] {
 }
 
 /**
+ * A CUJ's program time: the sum of its executor steps' measured ms.
+ *
+ * @param dir The CUJ folder, e.g. ".runs/x/toy-country"; reads its executor.json.
+ * @returns   The total ms, e.g. 4200, or undefined when the run failed or no step has a numeric ms.
+ */
+export function stepMs(dir: string): number | undefined {
+  const steps = readJson(join(dir, "executor.json"))?.data?.steps;
+  const ms = Array.isArray(steps) ? steps.map((x) => x?.ms).filter((m) => typeof m === "number" && m >= 0) : [];
+  return ms.length ? ms.reduce((a: number, b: number) => a + b, 0) : undefined;
+}
+
+/**
+ * Break a judged tie by speed: the run at least 1.5x faster wins it. Pure.
+ *
+ * @param winner   The judges' winner, e.g. "tie".
+ * @param ms       Each run's program time, e.g. {a: 4000, b: 9000}.
+ * @param tiebreak "speed" to break ties, "none" to keep them.
+ * @returns        The winner and whether speed decided it, e.g. {winner: "a", bySpeed: true}.
+ */
+export function speedBreak(
+  winner: Game["winner"],
+  ms: { a?: number; b?: number },
+  tiebreak: Tiebreak,
+): { winner: Game["winner"]; bySpeed: boolean } {
+  const { a, b } = ms;
+  if (winner !== "tie" || tiebreak !== "speed" || !a || !b || Math.max(a, b) < 1.5 * Math.min(a, b))
+    return { winner, bySpeed: false };
+  return { winner: a < b ? "a" : "b", bySpeed: true };
+}
+
+/**
  * One CUJ of a run, for comparison: the executor's evidence and the task it was given.
  *
  * @param dir The run folder.
@@ -111,6 +146,7 @@ function cujEntry(dir: string, id: string, run: Loose): Side["cujs"][string] {
   return {
     evidence: ev.error === undefined ? ev : { journey: "", reply: `(evidence unreadable: ${ev.error})` },
     task: { instruction: String(run.defs?.[id]?.instruction ?? ""), expectations },
+    ms: stepMs(join(dir, id)),
   };
 }
 
@@ -212,6 +248,32 @@ export function table(rows: Row[]): string {
 }
 
 /**
+ * Milliseconds as seconds for a table. Pure.
+ *
+ * @param ms e.g. 41234, or undefined.
+ * @returns  e.g. "41.2 s", or "?" when unknown.
+ */
+const secs = (ms?: number) => (ms === undefined ? "?" : `${(ms / 1000).toFixed(1)} s`);
+
+/**
+ * Every game in one markdown table with both runs' program times. Pure.
+ *
+ * @param games The games, e.g. [{cuj: "toy-country", a: "gemma", b: "qwen", winner: "a", ms: {a: 4000}}].
+ * @returns     e.g. "| toy-country | gemma | qwen | 4.0 s | ? | gemma |"; a speed-broken tie is marked "(speed)".
+ */
+export function timeTable(games: Game[]): string {
+  const won = (g: Game) =>
+    (g.winner === null ? "no verdict" : g.winner === "tie" ? "tie" : g.winner === "a" ? g.a : g.b) +
+    (g.bySpeed ? " (speed)" : "");
+  const line = (g: Game) => `| ${g.cuj} | ${g.a} | ${g.b} | ${secs(g.ms?.a)} | ${secs(g.ms?.b)} | ${won(g)} |`;
+  return [
+    "| CUJ | A | B | A time | B time | winner |",
+    "| --- | --- | --- | --- | --- | --- |",
+    ...games.map(line),
+  ].join("\n");
+}
+
+/**
  * The comparison as markdown: the table, the total judge cost, then each game's winner and judges' reasons. Pure.
  *
  * @param rows    From standings().
@@ -229,9 +291,13 @@ export function compareMd(rows: Row[], games: Game[], costUsd: number): string {
         `- ${m}: ${v.result ?? "no result"}\n  - ${g.a} shown as A: ${name(g, v.ab, "A")}. ${v.whyAB}\n` +
         `  - ${g.a} shown as B: ${name(g, v.ba, "B")}. ${v.whyBA}`,
     );
-    return `## ${g.cuj}: ${g.a} vs ${g.b}\n\nWinner: ${won}\n\n${judges.join("\n")}`;
+    const how = g.bySpeed ? " (judges tied; the faster run takes it)" : "";
+    const t = `Time: ${g.a} ${secs(g.ms?.a)}, ${g.b} ${secs(g.ms?.b)}`;
+    return `## ${g.cuj}: ${g.a} vs ${g.b}\n\nWinner: ${won}${how}\n\n${t}\n\n${judges.join("\n")}`;
   };
-  return [table(rows), `Total judge cost: ${fmtUsd(costUsd)}`, ...games.map(game)].join("\n\n") + "\n";
+  return (
+    [table(rows), timeTable(games), `Total judge cost: ${fmtUsd(costUsd)}`, ...games.map(game)].join("\n\n") + "\n"
+  );
 }
 
 /**
@@ -246,18 +312,18 @@ const safe = (s: string) => s.replace(/[^\w.-]/g, "_");
  * The program for `michelin compare`: load every run, judge every pair on every CUJ both ran, write the results and
  * print the table, the total judge cost and the out folder.
  *
- * @param args From parseCli: runs ("dir" or "name=dir"), settingsPath, flags.judges, hide.
+ * @param args From parseCli: runs ("dir" or "name=dir"), settingsPath, flags.judges and flags.tiebreak, hide.
  * @param llm  How to call an LLM: the real llm(), or a test fake.
  * @param cwd  Where relative paths start and .runs/compare-<ISO>/ is made, e.g. process.cwd().
  * @returns    The out folder, the standings, the games and the total judge cost in USD.
  * @throws     A UsageError on clashing run names; an Error on a run folder without run.json or bad settings.
  */
 export async function compareMain(
-  args: { runs: string[]; settingsPath?: string; flags: { judges?: string }; hide: string[] },
+  args: { runs: string[]; settingsPath?: string; flags: { judges?: string; tiebreak?: Tiebreak }; hide: string[] },
   llm: CompareLlm,
   cwd = process.cwd(),
 ): Promise<{ out: string; rows: Row[]; games: Game[]; costUsd: number }> {
-  const { settings, pairJudges } = loadConfig({ settingsPath: args.settingsPath, flags: args.flags, cwd });
+  const { settings, pairJudges, tiebreak } = loadConfig({ settingsPath: args.settingsPath, flags: args.flags, cwd });
   const judges = args.flags.judges ? settings.judge : settings.judge.slice(0, pairJudges);
   const sides = nameRuns(args.runs, cwd).map(([name, dir]) => loadSide(dir, name, args.hide));
   const out = join(cwd, ".runs", `compare-${new Date().toISOString().replace(/[:.]/g, "-")}`);
@@ -278,8 +344,10 @@ export async function compareMain(
       const dir = join(out, safe(cuj), `${safe(x.name)}-vs-${safe(y.name)}`);
       const r = await judgePair(logged, judges, dir, { task, first, second });
       costUsd += r.costUsd;
-      const winner = r.winner === "first" ? "a" : r.winner === "second" ? "b" : r.winner;
-      games.push({ cuj, a: x.name, b: y.name, winner, judges: r.judges });
+      const judged = r.winner === "first" ? "a" : r.winner === "second" ? "b" : r.winner;
+      const ms = { a: x.cujs[cuj].ms, b: y.cujs[cuj].ms };
+      const { winner, bySpeed } = speedBreak(judged, ms, tiebreak);
+      games.push({ cuj, a: x.name, b: y.name, winner, judges: r.judges, ms, bySpeed });
     }
   }
   const rows = standings(

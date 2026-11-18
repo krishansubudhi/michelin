@@ -3,7 +3,8 @@
 // ./michelin.json (or the file given with --settings <file> instead), then the built-in defaults/settings.json in
 // this package (found from import.meta.url, never the current folder). michelin.json may hold any subset of the
 // roles below plus subject (string), cujs (list of strings), runs (whole number >= 1) and pair_judges (whole
-// number >= 1: how many of the first judges `michelin compare` asks, default 1).
+// number >= 1: how many of the first judges `michelin compare` asks, default 1) and tiebreak ("speed" or "none":
+// whether `michelin compare` breaks a judged tie by wall time, default "speed").
 // Every entry is {"model": "<id>", "effort": "<low|medium|high|xhigh|max>"}.
 //
 //   constructor  runs <subject>/setup.md         (one entry)
@@ -102,7 +103,10 @@ export function loadSettings(path = DEFAULTS, judging?: Judging): Settings {
 }
 
 /** What the command line may set: --model "m" or "m@effort", --judges "a,b@effort", --runs N. */
-export type Flags = { model?: string; judges?: string; runs?: number };
+export type Flags = { model?: string; judges?: string; runs?: number; tiebreak?: Tiebreak };
+
+/** How `michelin compare` breaks a judged tie: "speed" (the run 1.5x faster or more wins) or "none". */
+export type Tiebreak = "speed" | "none";
 
 /** A resolved run: models per role, and the subject, CUJs and repeat count from michelin.json or flags. */
 export type Config = {
@@ -116,6 +120,8 @@ export type Config = {
   runs: number;
   /** How many of the first judges `michelin compare` asks when --judges isn't given, e.g. 3; default 1. */
   pairJudges: number;
+  /** How `michelin compare` breaks a judged tie, e.g. "none"; default "speed". */
+  tiebreak: Tiebreak;
 };
 
 /** Per extra michelin.json field: a check of its value and what it must be. */
@@ -124,6 +130,7 @@ const EXTRA: Record<string, [(v: unknown) => boolean, string]> = {
   cujs: [(v) => Array.isArray(v) && v.every((c) => typeof c === "string"), "a list of strings"],
   runs: [(v) => Number.isInteger(v) && (v as number) >= 1, "a whole number >= 1"],
   pair_judges: [(v) => Number.isInteger(v) && (v as number) >= 1, "a whole number >= 1"],
+  tiebreak: [(v) => v === "speed" || v === "none", '"speed" or "none"'],
 };
 
 /**
@@ -167,8 +174,9 @@ function parsePick(s: string, effort: Pick["effort"], flag: string): Pick {
  * The non-role fields of a resolved config, each from flags, then the file, then its default. Pure.
  *
  * @param f     The checked file, e.g. {subject: "subjects/toy", runs: 2, pair_judges: 3}.
- * @param flags From the command line, e.g. {runs: 5}; only runs is read.
- * @returns     subject (undefined if none), cujs ([] if none), runs (default 1) and pairJudges (default 1).
+ * @param flags From the command line, e.g. {runs: 5}; only runs and tiebreak are read.
+ * @returns     subject (undefined if none), cujs ([] if none), runs (default 1), pairJudges (default 1) and tiebreak
+ *              (default "speed").
  */
 function extras(f: Record<string, unknown>, flags: Flags): Omit<Config, "settings"> {
   return {
@@ -176,6 +184,7 @@ function extras(f: Record<string, unknown>, flags: Flags): Omit<Config, "setting
     cujs: (f.cujs as string[]) ?? [],
     runs: flags.runs ?? (f.runs as number) ?? 1,
     pairJudges: (f.pair_judges as number) ?? 1,
+    tiebreak: flags.tiebreak ?? (f.tiebreak as Tiebreak) ?? "speed",
   };
 }
 
