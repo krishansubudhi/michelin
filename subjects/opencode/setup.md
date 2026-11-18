@@ -2,6 +2,8 @@ Prepares a throwaway workspace for OpenCode (https://opencode.ai), the open-sour
 
 OpenCode needs a model of its own, named by the environment variable OPENCODE_MODEL in OpenCode's `provider/model` form, e.g. `ollama/<model>` (free, local Ollama; pick a model that supports tool calls, small ones often fumble them) or `anthropic/<model>` (with ANTHROPIC_API_KEY set). For an `ollama/...` model, setup writes the provider block itself, pointing at OLLAMA_API_BASE (default http://localhost:11434). Michelin's own roles still run on the `claude` CLI.
 
+OPENCODE_TOOLS_OFF (optional) is a comma-separated list of OpenCode tools to turn off for this run, e.g. `OPENCODE_TOOLS_OFF=todowrite`. Setup writes it into opencode.json as `"tools": {"todowrite": false}`, OpenCode's own setting, so the model is never offered that tool. Use it when a model's tool calls for one tool fail to parse: Gemma 4 26B on Ollama 0.40 (`gemma4:26b-mlx`) writes `todowrite` calls (an array of objects) that Ollama's gemma4 parser cannot repair (`gemma4 tool call parsing failed` in the Ollama server log); the call is dropped, OpenCode sees a turn with no tool call and ends the session mid-task. Unset, every tool stays on.
+
 TMP: the run's scratch folder named at the end of this prompt. OpenCode's workspace and config go in it, and teardown deletes them.
 
 Run the block below as ONE shell command, with TMP filled in, and a shell timeout of at least 3 minutes:
@@ -12,10 +14,12 @@ TMP=<scratch folder>
 command -v opencode >/dev/null || { echo "setup failed: opencode not found; npm install -g opencode-ai"; exit 1; }
 command -v git >/dev/null || { echo "setup failed: git not found"; exit 1; }
 mkdir -p "$TMP/work" && git -C "$TMP/work" init -q || { echo "setup failed: could not make $TMP/work"; exit 1; }
-python3 - "$TMP/opencode.json" "$OPENCODE_MODEL" "${OLLAMA_API_BASE:-http://localhost:11434}" <<'PY' || { echo "setup failed: could not write opencode.json"; exit 1; }
+python3 - "$TMP/opencode.json" "$OPENCODE_MODEL" "${OLLAMA_API_BASE:-http://localhost:11434}" "${OPENCODE_TOOLS_OFF:-}" <<'PY' || { echo "setup failed: could not write opencode.json"; exit 1; }
 import json, sys
-path, model, ollama = sys.argv[1:4]
+path, model, ollama, off = sys.argv[1:5]
 cfg = {"$schema": "https://opencode.ai/config.json", "model": model, "autoupdate": False, "share": "disabled"}
+if off.strip():
+    cfg["tools"] = {t.strip(): False for t in off.split(",") if t.strip()}
 if model.startswith("ollama/"):
     name = model.split("/", 1)[1]
     cfg["provider"] = {"ollama": {"npm": "@ai-sdk/openai-compatible", "name": "Ollama",
