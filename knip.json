@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "entry": ["scripts/*.ts", "test/**/*.test.ts"],
+  "entry": ["bin/michelin.js", "scripts/*.ts", "test/**/*.test.ts"],
   "ignore": ["src/report/*.css"],
   "ignoreDependencies": ["tailwindcss", "@playwright/cli"]
 }

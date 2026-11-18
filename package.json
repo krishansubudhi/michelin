@@ -1,7 +1,19 @@
 {
-  "name": "michelin",
-  "private": true,
+  "name": "michelin-eval",
+  "version": "0.1.0",
+  "description": "Eval harness for AI agents: describe user journeys in plain words, LLM judges score the evidence.",
   "license": "MIT",
+  "keywords": [
+    "eval",
+    "llm",
+    "agents",
+    "claude",
+    "testing"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/krishansubudhi/michelin.git"
+  },
   "engines": {
     "node": ">=22.18"
   },
@@ -9,8 +21,15 @@
   "prettier": {
     "printWidth": 120
   },
+  "files": [
+    "bin",
+    "src",
+    "skills",
+    "defaults",
+    "subjects/toy"
+  ],
   "bin": {
-    "michelin": "src/run/runner.ts"
+    "michelin": "bin/michelin.js"
   },
   "scripts": {
     "test": "node --test test/*.test.ts",

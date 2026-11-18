@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // The runner: one program that takes a subject from construction to destruction.
 //
-//   node src/run/runner.ts subjects/toy subjects/toy/cujs/toy/country.yaml   (--help for usage; `michelin` after npm link)
+//   node src/run/runner.ts subjects/toy subjects/toy/cujs/toy/country.yaml   (--help for usage; `michelin` via bin/michelin.js)
 //   node src/run/runner.ts subjects/toy subjects/toy/cujs/toy/   (a folder: every *.yaml in it, sorted, each a fresh run)
 //
 // Test: npm test (no LLM, ~1 s). Live: the second command above (one CUJ end to end).
@@ -13,7 +13,7 @@
 //   d. settings.judge scores each CUJ that ran, in parallel with c (judge.ts: first judge, all + majority on a fail or flip)
 // Every role returns typed JSON (claude --json-schema), validated on arrival; an invalid result is an error. A failed setup skips every CUJ (no executor, no judge), still destructs, and exits 1.
 //
-// CUJ files are found and checked in cujs.ts. The runner itself has no LLM. Only the judges see a CUJ's expectations; they run alongside teardown, reading saved outputs, never the subject. Models come from settings.json via settings.ts.
+// CUJ files are found and checked in cujs.ts. The runner itself has no LLM. Only the judges see a CUJ's expectations; they run alongside teardown, reading saved outputs, never the subject. Models come from defaults/settings.json via settings.ts.
 // The subject's own install and temp state go in /tmp/michelin/runs/<runid>/ (scratch.ts): made before setup, named in the constructor's and destructor's prompts, deleted after the run. Everything else lands in .runs/<runid>/ (spec line 5):
 //   run.json                    the typed index: subject, settings, claude version, setup, statuses, scores, sessions, outputs, times
 //   constructor.json / destructor.json   their checked results ({ok, data} or {ok:false, error}, plus raw text)
@@ -26,8 +26,9 @@
 import { setupReport } from "./setup-report.ts";
 import { readFileSync, writeFileSync, mkdirSync, appendFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { loadSettings, type Settings } from "./settings.ts";
-import { USAGE, UsageError, parseCli } from "./cli.ts";
+import { USAGE, parseCli, runMain } from "./cli.ts";
 import { llm, claudeVersion, toSession, type Llm, type Pick, type Session } from "../llm/models.ts";
 import { judgeCuj } from "../llm/judge.ts";
 import {
@@ -65,6 +66,9 @@ export const constructorPrompt = (setup: string, scratch = "", given?: Given) =>
     'If any step fails, stop and return ok: false with notes giving the reason, e.g. "harness not found: <path>".',
   ].join("\n\n");
 
+/** The browser skill shipped in this package, e.g. "/usr/lib/node_modules/michelin-eval/skills/browser/SKILL.md". */
+const BROWSER_SKILL = fileURLToPath(new URL("../../skills/browser/SKILL.md", import.meta.url));
+
 /**
  * Build the executor's prompt. It holds the instruction but never the expectations.
  *
@@ -73,13 +77,14 @@ export const constructorPrompt = (setup: string, scratch = "", given?: Given) =>
  * @param root        Absolute path of the michelin folder, e.g. "/srv/michelin"; howtorun's relative paths start there.
  * @param opts        setup: what setup reported (same text teardown gets), e.g. its PORT and TOKEN; "" if none.
  *                    out: absolute path of this CUJ's run folder, e.g. "/repo/.runs/<runid>/chat-name"; "" to leave it out.
+ *                    skill: the browser skill file, e.g. "/pkg/skills/browser/SKILL.md"; default this package's.
  * @returns           The full prompt text.
  */
 export const executorPrompt = (
   howtorun: string,
   cuj: { instruction: string; given?: Given },
   root: string,
-  { setup = "", out = "" }: { setup?: string; out?: string } = {},
+  { setup = "", out = "", skill = BROWSER_SKILL }: { setup?: string; out?: string; skill?: string } = {},
 ) =>
   [
     "You are testing a program. How to run it:",
@@ -91,7 +96,7 @@ export const executorPrompt = (
     cuj.instruction,
     'Return steps: one per call you made to the program, each {action: what you did, e.g. "run"; input: what you sent; got: what it printed, verbatim and in full (never shorten it, summarise it or elide any part with "..." or "{...}": a judge sees only what you put here); ms: how long it took}.',
     "Measure ms, never estimate it: time each call, e.g. s=$(date +%s%N); <command>; echo $(( ($(date +%s%N) - s) / 1000000 )).",
-    `If a step needs a browser, read ${root}/skills/browser/SKILL.md first.`,
+    `If a step needs a browser, read ${skill} first.`,
     ...(out ? [`Save files for the record (e.g. screenshots) in ${out}; name each path in its step's got.`] : []),
     "Then reply: a short account of what happened.",
   ].join("\n\n");
@@ -372,13 +377,11 @@ async function main() {
   const args = parseCli(process.argv.slice(2));
   if (!args) return console.log(USAGE);
   const [subject, ...picked] = [args.subject, ...args.picked].map((p) => resolveArg(p)); // or under MICHELIN_SUBJECTS
-  const settings = loadSettings(args.settingsPath ? resolveArg(args.settingsPath) : "settings.json", args.judging);
+  const settings = loadSettings(args.settingsPath ? resolveArg(args.settingsPath) : undefined, args.judging);
   const files = expandCujs(picked);
   checkUniqueIds(files);
-  const groups = runGroups(
-    picked,
-    files.map((p) => [p, loadCuj(p)] as const),
-  );
+  const loaded = files.map((p) => [p, loadCuj(p)] as const);
+  const groups = runGroups(picked, loaded);
   for (const g of groups) sharedGiven(g); // refuse mixed givens before any setup
   const runs: Run[] = [];
   const release = await acquireRunLock(); // one run at a time: setup picks ports by scanning, which races (runlock.ts)
@@ -391,10 +394,6 @@ async function main() {
   process.exitCode = Math.max(...runs.map(exitCode));
 }
 
-// Run only when called as a program, also through the npm-linked `michelin` symlink (tests import the helpers).
-if (import.meta.main)
-  main().catch((e) => {
-    const usage = e instanceof UsageError;
-    console.error(usage ? `${USAGE}\nerror: ${e.message}` : e.message);
-    process.exit(usage ? 2 : 1);
-  });
+/** The program with its exit codes (runMain): 2 on a usage error, 1 on any other. bin/michelin.js calls it. */
+export const cli = () => runMain(main);
+if (import.meta.main) cli(); // only when run as a program: tests import the helpers

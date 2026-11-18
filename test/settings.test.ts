@@ -20,7 +20,7 @@ const file = (name: string, body: string) => {
 const refuses = (name: string, s: unknown, re = /needs constructor/) =>
   assert.throws(() => loadSettings(file(`${name}.json`, JSON.stringify(s))), re);
 
-test("the real settings.json names a model and effort for every role", () => {
+test("the built-in defaults/settings.json names a model and effort for every role", () => {
   loadSettings();
 });
 

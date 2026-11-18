@@ -9,7 +9,7 @@ export const USAGE = `usage: node src/run/runner.ts [--settings file] [--all-jud
   <subject>        folder with setup.md, howtorun.md and teardown.md, e.g. subjects/toy
   <cuj> ...        one or more CUJ yaml files or folders (required), e.g. subjects/toy/cujs/toy/country.yaml or subjects/toy/cujs/toy/;
                    a folder runs every *.yaml directly in it, sorted, each on a fresh start (its own setup/teardown)
-  --settings file  models per role (default settings.json)
+  --settings file  models per role (default: defaults/settings.json in the michelin package)
   --all-judges     every judge in settings scores every CUJ (default: the first judge alone, the rest only when it
                    fails an expectation, gives no valid result, or differs from --baseline; then the majority wins)
   --baseline dir   an earlier run folder whose <cuj-id>/verdict.json is the baseline verdict (repeatable, first match wins)
@@ -51,4 +51,18 @@ export function parseCli(argv: string[]) {
     settingsPath: values.settings,
     judging: { all: values["all-judges"] ?? false, baselines: values.baseline ?? [] },
   };
+}
+
+/**
+ * Run the program and turn its failure into an exit code: a UsageError prints USAGE and the error and exits 2,
+ * any other error prints its message and exits 1.
+ *
+ * @param main The program, e.g. runner.ts's main.
+ */
+export function runMain(main: () => Promise<unknown>): void {
+  main().catch((e) => {
+    const usage = e instanceof UsageError;
+    console.error(usage ? `${USAGE}\nerror: ${e.message}` : e.message);
+    process.exit(usage ? 2 : 1);
+  });
 }
