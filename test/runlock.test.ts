@@ -10,8 +10,8 @@ import { RUN_LOCK, acquireRunLock, alive } from "../src/run/runlock.ts";
 const lockIn = () => join(mkdtempSync(join(tmpdir(), "runlock-")), "run.lock");
 const deadPid = () => spawnSync("true").pid as number;
 
-test("the lock lives in the shared /tmp/michelin; alive() knows a dead pid", () => {
-  assert.equal(RUN_LOCK, "/tmp/michelin/run.lock");
+test("the lock lives in the shared /tmp/michelin ($MICHELIN_TMP when set); alive() knows a dead pid", () => {
+  assert.equal(RUN_LOCK, `${process.env.MICHELIN_TMP || "/tmp/michelin"}/run.lock`);
   assert.ok(alive(process.pid));
   assert.ok(!alive(deadPid()));
 });

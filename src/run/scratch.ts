@@ -1,4 +1,4 @@
-// The subject's throwaway space: /tmp/michelin/runs/<runid>/, made before setup and removed after teardown.
+// The subject's throwaway space: /tmp/michelin/runs/<runid>/ ($MICHELIN_TMP/runs/<runid>/ when set), made before setup and removed after teardown.
 // Results never go here; they stay in .runs/<runid>/.
 //
 // Test: npm test (scratch.test.ts, no LLM).
@@ -6,8 +6,14 @@
 import { mkdirSync, rmSync } from "node:fs";
 import { basename, join } from "node:path";
 
+/**
+ * Michelin's machine-wide temp folder, shared by every OS user: /tmp/michelin, or $MICHELIN_TMP when set
+ * (e.g. MICHELIN_TMP=/tmp/michelin-dev for a second OS user when /tmp/michelin is not world-writable).
+ */
+export const TMP_ROOT = process.env.MICHELIN_TMP || "/tmp/michelin";
+
 /** Where every run's scratch folder lives. */
-export const SCRATCH_ROOT = "/tmp/michelin/runs";
+export const SCRATCH_ROOT = join(TMP_ROOT, "runs");
 
 /**
  * The scratch folder for one run. Pure.

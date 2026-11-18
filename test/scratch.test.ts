@@ -2,11 +2,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
-import { SCRATCH_ROOT, dropScratch, makeScratch, scratchFor, scratchNote } from "../src/run/scratch.ts";
+import { SCRATCH_ROOT, TMP_ROOT, dropScratch, makeScratch, scratchFor, scratchNote } from "../src/run/scratch.ts";
 
-test("a run's scratch folder is named by its run id under /tmp/michelin/runs", () => {
-  assert.equal(SCRATCH_ROOT, "/tmp/michelin/runs");
-  assert.equal(scratchFor(".runs/2026-11-10T02-58"), "/tmp/michelin/runs/2026-11-10T02-58");
+test("a run's scratch folder is named by its run id under /tmp/michelin/runs ($MICHELIN_TMP/runs when set)", () => {
+  assert.equal(TMP_ROOT, process.env.MICHELIN_TMP || "/tmp/michelin");
+  assert.equal(SCRATCH_ROOT, `${TMP_ROOT}/runs`);
+  assert.equal(scratchFor(".runs/2026-11-10T02-58"), `${TMP_ROOT}/runs/2026-11-10T02-58`);
   assert.ok(scratchNote("/tmp/michelin/runs/x").includes("/tmp/michelin/runs/x"));
 });
 

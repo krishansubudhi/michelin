@@ -1,5 +1,5 @@
 // One michelin run at a time, across processes and users: setup.md picks ports by scanning up from 8797, which races.
-// The lock is /tmp/michelin/run.lock, holding {pid, user, started}. /tmp/michelin is shared by every OS user on the machine
+// The lock is /tmp/michelin/run.lock ($MICHELIN_TMP/run.lock when set), holding {pid, user, started}. /tmp/michelin is shared by every OS user on the machine
 // (sticky 1777), so the file is made 0644 by an atomic exclusive link of a fully written temp file.
 //
 // Test: npm test (runlock.test.ts, no LLM).
@@ -8,9 +8,10 @@ import { linkSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "no
 import { userInfo } from "node:os";
 import { dirname } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
+import { TMP_ROOT } from "./scratch.ts";
 
 /** Where the lock lives. */
-export const RUN_LOCK = "/tmp/michelin/run.lock";
+export const RUN_LOCK = `${TMP_ROOT}/run.lock`;
 
 /** True if pid is a live process; EPERM means alive but another user's. */
 export const alive = (pid: number) => {
