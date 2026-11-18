@@ -25,28 +25,34 @@ That is the healthy outcome:
 - **ask_repo**: with the read-only `plan` agent, OpenCode answered that `total(["apple", "pear", "pear"])` returns 13 and that `prices.py` holds the prices. Both files kept their shasums.
 - **fail_control**: OpenCode did the task right (`hello.py` printed `Hello, world.`, reply in English), so every judge failed both deliberately wrong expectations. The panel is checking the evidence, not rubber-stamping.
 
-## SWE-bench Lite: Gemma 4 26B vs Qwen 3.8 27B (2026-11-18)
+## SWE-bench Lite: Gemma 4 26B vs Qwen 3.8 27B, judged blind to the tests (2026-11-18)
 
-One OpenCode run per model on the 5 `cujs/swe/` CUJs, then `michelin compare` (1 judge, both orders). Tests are
-`swe/check.sh` on OpenCode's saved `opencode.patch`, applied to a clean base checkout (FAIL_TO_PASS / PASS_TO_PASS).
+One OpenCode run per model on the 5 `cujs/swe/` CUJs, then `michelin compare` with 1 judge (Sonnet 5.5, high effort),
+both orders, model and run names scrubbed. The judge saw only the issue and each model's diff: `swe/blind.py` builds the
+compared run folders from the issue (`problem.md`) and the saved `opencode.patch`, with no `check.sh` output, no
+FAIL_TO_PASS / PASS_TO_PASS counts and no hidden test patch. The judge call has no tools and runs in an empty temp folder.
+Only after judging were the hidden tests run on each saved patch, on a clean base checkout (`swe/hidden.sh`).
 
-| CUJ          | gemma4:26b-mlx         | qwen3.8:27b           | judge | gemma time | qwen time |
-| ------------ | ---------------------- | --------------------- | ----- | ---------- | --------- |
-| pytest-11143 | 0/1, 114/114 (no edit) | 1/1, 114/114 resolved | qwen  | 252 s      | 273 s     |
-| pytest-5227  | 0/3, 31/31 (no edit)   | 3/3, 31/31 resolved   | qwen  | 322 s      | 229 s     |
-| pytest-6116  | 0/2, 69/69 (no edit)   | 0/2, 69/69            | qwen  | 174 s      | 611 s     |
-| pytest-7168  | 9/11                   | 11/11 resolved        | qwen  | 132 s      | 448 s     |
-| pytest-7432  | 0/1, 77/77 (no edit)   | 1/1, 77/77 resolved   | qwen  | 136 s      | 283 s     |
+| CUJ          | gemma4:26b-mlx patch | qwen3.8:27b patch | judge, A/B and B/A | gemma tests  | qwen tests            | judge vs tests      |
+| ------------ | -------------------- | ----------------- | ------------------ | ------------ | --------------------- | ------------------- |
+| pytest-11143 | 0 B (no edit)        | 557 B             | qwen, qwen         | 0/1, 114/114 | 1/1, 114/114 resolved | agree               |
+| pytest-5227  | 0 B (no edit)        | 1604 B            | qwen, qwen         | 0/3, 31/31   | 3/3, 31/31 resolved   | agree               |
+| pytest-6116  | 0 B (no edit)        | 367 B             | qwen, qwen         | 0/2, 69/69   | 0/2, 69/69            | tests cannot decide |
+| pytest-7168  | 576 B                | 1452 B            | qwen, qwen         | 9/11         | 11/11 resolved        | agree               |
+| pytest-7432  | 0 B (no edit)        | 1876 B            | qwen, qwen         | 0/1, 77/77   | 1/1, 77/77 resolved   | agree               |
 
-Qwen resolves 4/5 and Gemma 0/5. The judge went 5-0 for Qwen and agreed with the tests on 4/5: on 6116 neither model
-resolves, and the judge credited Qwen's partial attempt. Judge cost: $0.36.
+The judge preferred Qwen on all 5, and both orders agreed every time. It agreed with the hidden tests on 4 of 4 tasks
+the tests can decide; on 6116 neither model resolves the issue, so the tests cannot decide it. Judge cost: $0.25.
 
-**Limits.** This is small: 5 tasks, the 5 easiest pytest instances of SWE-bench Lite, one run per model, one judge
-(Sonnet 5.5, both orders). Gemma made no edit at all on 4 of the 5 (an empty `opencode.patch`), so on those the judge
-only had to tell an attempt from no attempt, which is an easy call. The one informative case is pytest-7168, where both
-models edited (9/11 vs 11/11 FAIL_TO_PASS) and the judge picked the one the tests favour. On pytest-6116 neither model
-resolved the issue and the judge still preferred Qwen's one-line edit over Gemma's empty diff, which the tests cannot
-confirm. The judge was blind to which model ran, but not to the tests: each CUJ has the executor run `check.sh` and
-record its output, so the judge read the FAIL_TO_PASS / PASS_TO_PASS counts it was ranking. Its agreement with the
-tests is therefore not independent. Read this as a sanity check that the blind compare points the same way as real
-tests, not as a model ranking and not as a judge-accuracy number.
+**Gemma made no edit on 4 of the 5, and that is mostly not about the model.** Two of the four (11143, 6116) are a setup
+fault: Ollama 0.40.13's gemma4 tool-call parser failed on OpenCode's `todowrite` call and dropped it silently
+(`gemma4 tool call parsing failed` in the server log), so OpenCode saw a turn with no tool call and ended the session
+mid-task. Those runs are being redone with `todowrite` off (`OPENCODE_TOOLS_OFF=todowrite`, see `setup.md`). The other
+two (5227, 7432) are model stalls: Gemma described its next step in prose and stopped without calling a tool.
+
+**Limits.** This is not a model ranking. It is 5 easy tasks (the 5 easiest pytest instances of SWE-bench Lite), one
+run per model, one judge and a two-line rubric. Three of the four agreements are an edit against an empty diff, which
+any judge gets right. The only informative task is pytest-7168, the one where both models edited: the judge picked the
+patch the tests favour, 1 of 1. That says the blind judge points the same way as the tests here, nothing more about
+its accuracy. The models' checkouts had full git history, so the upstream fix was reachable through `git log`; nothing
+shows either model looked.
