@@ -108,10 +108,4 @@
   a.cid {
     @apply underline decoration-zinc-300 underline-offset-2 hover:decoration-current dark:decoration-zinc-600;
   }
-  .why ul {
-    @apply mt-1 ml-4 list-disc space-y-1;
-  }
-  ol.why {
-    @apply space-y-2;
-  }
 }

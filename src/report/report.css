@@ -194,9 +194,6 @@
   tbody th {
     @apply text-sm font-normal text-zinc-900 dark:text-zinc-100;
   }
-  .votes th:first-child {
-    @apply sticky left-0 z-[1] min-w-32 bg-white pr-3 sm:min-w-48 dark:bg-zinc-900;
-  }
   .sessions {
     @apply min-w-[36rem];
   }
@@ -204,26 +201,36 @@
   .sessions td:nth-child(4) {
     @apply whitespace-nowrap tabular-nums;
   }
-  .votes thead th + th,
-  .votes td {
-    @apply px-2 text-center whitespace-nowrap;
-  }
-  .votes .jn {
-    @apply text-[11px];
-  }
-  .votes td.ok,
-  .votes td.bad,
-  .votes td.maj {
-    @apply font-semibold;
-  }
   td.ok {
     @apply text-emerald-700 dark:text-emerald-400;
   }
   td.bad {
     @apply text-rose-700 dark:text-rose-400;
   }
-  .votes td.maj {
-    @apply bg-zinc-50 dark:bg-zinc-800/50;
+  /* Verdicts: each expectation, numbered, with every judge's pass/fail and reason right under it. */
+  ol.verdicts {
+    @apply mt-2 list-none space-y-3 pl-0;
+  }
+  .verdicts > li {
+    @apply rounded-xl border border-zinc-200 p-3 dark:border-zinc-800;
+  }
+  .verdicts > li.bad {
+    @apply border-rose-300 dark:border-rose-500/40;
+  }
+  .verdicts .exp {
+    @apply flex items-start gap-2 text-sm font-medium text-zinc-900 dark:text-zinc-100;
+  }
+  .verdicts .n {
+    @apply text-zinc-500 tabular-nums dark:text-zinc-400;
+  }
+  .verdicts .et {
+    @apply min-w-0 flex-1 wrap-anywhere whitespace-pre-line;
+  }
+  .verdicts ul.votes {
+    @apply mt-2 ml-1 list-none space-y-1.5 border-l-2 border-zinc-200 pl-3 dark:border-zinc-700;
+  }
+  .verdicts .jv {
+    @apply mr-1 inline-flex items-center gap-1.5 align-middle;
   }
   .jn {
     @apply font-mono text-xs font-medium text-zinc-700 dark:text-zinc-300;
