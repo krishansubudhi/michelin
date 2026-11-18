@@ -54,6 +54,17 @@
   .page {
     @apply mx-auto max-w-4xl px-4 pb-16 sm:px-6;
   }
+  /* The credit lines above and under every report: small and grey, never competing with the results. */
+  .made {
+    @apply mx-auto max-w-4xl px-4 pb-8 text-center text-xs text-zinc-400 sm:px-6 dark:text-zinc-500;
+  }
+  .made-top {
+    @apply mx-auto max-w-4xl truncate px-4 pt-2 text-xs text-zinc-400 sm:px-6 dark:text-zinc-500;
+  }
+  .made a,
+  .made-top a {
+    @apply underline-offset-2 hover:underline;
+  }
 
   /* Header */
   .bar {

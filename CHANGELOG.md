@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.3
+
+- Published to npm: `npm install -g michelin-eval`. `bin/michelin.js` is now executable in git, so `npm i -g <folder>` and `npm i -g github:krishansubudhi/michelin` no longer fail with "permission denied".
+- The executor times each call as one command, `/usr/bin/time -p <command>`. The old `s=$(node -p Date.now()); ...; $(( ... ))` wrapper was blocked by Claude Code's Bash guard even under `bypassPermissions`, costing failed attempts on every CUJ.
+- `michelin compare --hide tok` always scrubs `tok` (whole words), however short: `--hide v2` now hides `v2`. Automatic identifiers under 3 characters are still skipped.
+- `skills/michelin/SKILL.md`: a Claude Code skill that teaches a coding agent to install Michelin, write a subject and CUJs, run them, read report.html, find the root cause, fix and rerun, and A/B with `michelin compare`. It ships in the package; the README says how to copy it into `~/.claude/skills`.
+- README: says up front that Michelin requires Claude Code (`claude` CLI, logged in).
+- Every report.html (run and compare) carries a slim grey credit line above the title, "Made with Michelin · npm i -g michelin-eval · GitHub", and a small footer, "Made with Michelin · github.com/krishansubudhi/michelin", both linking the repo.
+
 ## 0.1.2
 
 - `--executor` names the executor's model (Michelin's own agent). It replaces `--model`, which still works as a silent alias.

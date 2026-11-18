@@ -33,3 +33,15 @@ test("compareHtml: measures add a Times and metrics table with a column per metr
   assert.match(html, /<th scope="row">c<\/th><td>g<\/td><td>1\.5 s<\/td><td>9\.0 s<\/td><td>1&lt;2<\/td>/);
   assert.doesNotMatch(compareHtml(rows, [], 0), /Times and metrics/);
 });
+
+test("compareHtml: a slim credit line above the title and the 'Made with Michelin' footer, both linking the repo", () => {
+  const html = compareHtml([], [], 0);
+  assert.match(
+    html,
+    /<body><p class="made-top">Made with Michelin · npm i -g michelin-eval · <a href="https:\/\/github\.com\/krishansubudhi\/michelin">GitHub<\/a><\/p><header class="bar">/,
+  );
+  assert.match(
+    html,
+    /<\/main><footer class="made">Made with Michelin · <a href="https:\/\/github\.com\/krishansubudhi\/michelin">github\.com\/krishansubudhi\/michelin<\/a><\/footer><\/body>/,
+  );
+});

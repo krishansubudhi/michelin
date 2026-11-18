@@ -43,10 +43,11 @@ test("the executor prompt has the instruction, never expectations", () => {
   for (const e of cuj.expectations) assert.ok(!p.includes(e), `leaked expectation: ${e}`);
 });
 
-test("the executor prompt times calls portably: node's Date.now, never GNU-only date +%s%N", () => {
+test("the executor prompt times each call as one /usr/bin/time -p command, no $(...) the Bash guard blocks", () => {
   const p = executorPrompt("HOWTO", { instruction: "do it" }, "/repo");
-  assert.ok(p.includes("s=$(node -p Date.now()); <command>; echo $(( $(node -p Date.now()) - s ))"));
-  assert.ok(!p.includes("s=$(date +%s%N)"));
+  assert.ok(p.includes("/usr/bin/time -p <command>"));
+  assert.ok(!p.includes("s=$("), "no command substitution in the timing recipe");
+  assert.ok(!p.includes("date +%s%N"));
 });
 
 test("the executor prompt asks for metrics: [] unless the how-to-run names some", () => {

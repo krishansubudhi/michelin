@@ -176,7 +176,7 @@ export function loadSide(dir: string, name: string, hide: string[] = []): Side {
   const run = readJson(join(dir, "run.json"));
   if (!run || typeof run !== "object") throw new Error(`${join(dir, "run.json")}: missing or not valid JSON`);
   const notes = readJson(join(dir, "constructor.json"))?.data?.notes;
-  const ids = identifiers(dir, run, typeof notes === "string" ? notes : "", [...hide, name]);
+  const ids = identifiers(dir, run, typeof notes === "string" ? notes : "", { extra: [name], hide });
   const cujs = Object.fromEntries(cujIds(dir, run).map((id) => [id, cujEntry(dir, id, run)]));
   return { name, dir, ids, cujs };
 }

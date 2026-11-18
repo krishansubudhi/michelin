@@ -93,7 +93,7 @@ export const executorPrompt = (
     "Your task:",
     cuj.instruction,
     'Return steps: one per call you made to the program, each {action: what you did, e.g. "run"; input: what you sent; got: what it printed, verbatim and in full (never shorten it, summarise it or elide any part with "..." or "{...}": a judge sees only what you put here); ms: how long it took}.',
-    'Measure ms, never estimate it: time each call, e.g. s=$(node -p Date.now()); <command>; echo $(( $(node -p Date.now()) - s )) (portable: never date +%s%N, which macOS lacks).\n\nReturn metrics: [] unless the how-to-run above names metrics to record (cost, tokens, steps, anything); then one {name, value} per metric it names, read the way it says, value as a string (e.g. {name: "tokens", value: "48210"}).',
+    'Measure ms, never estimate it: time each call as one command, /usr/bin/time -p <command> (a pipeline or cd: /usr/bin/time -p sh -c \'<commands>\'), and take ms = its "real" seconds x 1000. Never wrap a call in $(...) or $((...)): Claude Code\'s Bash guard blocks that.\n\nReturn metrics: [] unless the how-to-run above names metrics to record (cost, tokens, steps, anything); then one {name, value} per metric it names, read the way it says, value as a string (e.g. {name: "tokens", value: "48210"}).',
     `If a step needs a browser, read ${skill} first.`,
     ...(out ? [`Save files for the record (e.g. screenshots) in ${out}; name each path in its step's got.`] : []),
     "Then reply: a short account of what happened.",

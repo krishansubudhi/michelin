@@ -2,6 +2,8 @@
 
 **Michelin evaluates a whole agent system on real user journeys: you write what a user does and what should be true afterwards, an LLM drives your agent through it, and blind LLM judges score the recorded evidence.**
 
+Requires Claude Code (`claude` CLI, logged in).
+
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![node >=22.18](https://img.shields.io/badge/node-%3E%3D22.18-brightgreen)](https://nodejs.org)
 
 **Evaluate one agent**
@@ -28,7 +30,7 @@ Needs Node 22.18+, `git`, `python3` (for the toy subject) and the [`claude` CLI]
 **Safety.** Every role runs `claude -p --permission-mode bypassPermissions`: it can run any command and edit any file your user can, with no prompt. Run subjects you don't trust in a sandbox or a VM.
 
 ```sh
-npm install -g github:krishansubudhi/michelin   # installs the `michelin` command
+npm install -g michelin-eval                   # installs the `michelin` command
 mkdir my-evals && cd my-evals
 michelin init                                   # writes michelin.json and copies the toy subject
 michelin run                                    # the first judge scores alone; the others join only on a fail
@@ -92,6 +94,8 @@ v1 passes 2/2 and v2 1/2, and the compare picks v1 in both orders:
 For your own agent, the two versions are whatever you are testing: two builds, two prompts, or two models set through the subject (for OpenCode, `OPENCODE_MODEL`).
 
 More: [Write a subject](docs/write-a-subject.md), [Compare](docs/compare.md).
+
+**Skill for your coding agent.** `mkdir -p ~/.claude/skills && cp -r "$(npm root -g)/michelin-eval/skills/michelin" ~/.claude/skills/` teaches Claude Code to write a subject and CUJs, run them, read the report, fix and rerun, and A/B with `michelin compare`.
 
 ## A real result: OpenCode
 

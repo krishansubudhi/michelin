@@ -48,31 +48,38 @@ function setupValues(notes: string): string[] {
  * @param run   The run's run.json, e.g. {subject: "subjects/opencode", settings: {executor: {model: "ollama/x"}}};
  *              subject and its folder name count, and the model of constructor, executor, destructor and every judge.
  * @param notes The constructor's setup notes; each NAME=value line's value counts, e.g. "MODEL=ollama/gemma4:26b-mlx".
- * @param extra More strings to hide (--hide), e.g. ["my-laptop"].
- * @returns     The distinct identifiers, empty ones and those under 3 characters dropped.
+ * @param more  extra: more strings that could name the run, e.g. its compare name ["gemma"]; under 3 characters
+ *              dropped like the rest. hide: what the user asked to hide (--hide), e.g. ["my-laptop", "v2"]; kept
+ *              whatever its length.
+ * @returns     The distinct identifiers: empty ones dropped, and those under 3 characters unless in hide.
  */
-export function identifiers(dir: string, run: RunInfo, notes = "", extra: string[] = []): string[] {
+export function identifiers(
+  dir: string,
+  run: RunInfo,
+  notes = "",
+  { extra = [], hide = [] }: { extra?: string[]; hide?: string[] } = {},
+): string[] {
   const subject = typeof run.subject === "string" ? [run.subject, basename(run.subject)] : [];
   const all = [basename(dir), resolve(dir), ...subject, ...models(run), ...setupValues(notes), ...extra];
-  return [
-    ...new Set(all.filter((x): x is string => typeof x === "string" && x.trim().length >= 3).map((x) => x.trim())),
-  ];
+  const found = all.filter((x): x is string => typeof x === "string" && x.trim().length >= 3);
+  return [...new Set([...found, ...hide].map((x) => x.trim()).filter(Boolean))];
 }
 
 /**
  * The forms of one identifier to hide. Pure.
  *
  * @param id An identifier, e.g. "ollama/gemma4:26b-mlx"; a path ("/x/y", "./y") is only ever hidden whole.
- * @returns  id, then for a non-path its part after the last "/", that part before ":", and its leading letters if
- *           4 or more, e.g. ["ollama/gemma4:26b-mlx", "gemma4:26b-mlx", "gemma4", "gemma"]; under 3 characters dropped.
+ * @returns  id itself whatever its length (an explicit --hide "v2" stays), then for a non-path its part after the last
+ *           "/", that part before ":", and its leading letters if 4 or more, each only if 3 characters or more,
+ *           e.g. ["ollama/gemma4:26b-mlx", "gemma4:26b-mlx", "gemma4", "gemma"].
  */
 export function variants(id: string): string[] {
   if (id.startsWith("/") || id.startsWith(".")) return [id];
   const tail = id.slice(id.lastIndexOf("/") + 1);
   const name = tail.split(":")[0];
   const letters = /^[a-z]*/i.exec(name)![0];
-  const all = [id, tail, name, letters.length >= 4 ? letters : ""];
-  return [...new Set(all.filter((v) => v.length >= 3))];
+  const short = [tail, name, letters.length >= 4 ? letters : ""].filter((v) => v.length >= 3);
+  return [...new Set([id, ...short].filter(Boolean))];
 }
 
 /** A letter, digit or underscore: what a hidden form may not touch on either side, so only whole tokens match. */

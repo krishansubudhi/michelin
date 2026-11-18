@@ -3,7 +3,7 @@
 //
 // Test: npm test (render.test.ts and report.test.ts, no LLM).
 
-import { alive, esc, fmtMs, fmtUsd, sessionsHtml, STALE_MS } from "./html.ts";
+import { alive, esc, fmtMs, fmtUsd, FOOTER_HTML, TOPLINE_HTML, sessionsHtml, STALE_MS } from "./html.ts";
 import type { FileText, Loose, RunView } from "./view.ts";
 import { TAILWIND_CSS } from "./tailwind.gen.ts";
 import { timelineHtml } from "./timeline.ts";
@@ -174,7 +174,7 @@ export function renderReport(view: RunView, now = Date.now()): string {
   return (
     `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">` +
     (run.finished ? "" : `<meta http-equiv="refresh" content="5">`) +
-    `<title>${esc(run.subject ?? "run")} report</title><style>${TAILWIND_CSS}</style></head><body>` +
+    `<title>${esc(run.subject ?? "run")} report</title><style>${TAILWIND_CSS}</style></head><body>${TOPLINE_HTML}` +
     `<header class="bar"><div class="bar-in"><h1>${esc(run.subject ?? "unknown subject")}</h1>${statusHtml(run, now)}` +
     `<p class="muted">${when}</p></div></header><main class="page">` +
     setupBanner(view) +
@@ -183,6 +183,6 @@ export function renderReport(view: RunView, now = Date.now()): string {
     settingsHtml(view) +
     filesCard("Debug", view.raw) +
     filesCard("Other files", view.unknown) +
-    `</main><script>${JS}</script></body></html>`
+    `</main>${FOOTER_HTML}<script>${JS}</script></body></html>`
   );
 }

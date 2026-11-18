@@ -118,12 +118,14 @@ test("timeline: a stale run pulses nothing; a finished run marks unreached phase
   assert.match(node(html, "teardown"), /class="node skipped"/);
 });
 
-test("styling: Tailwind CSS is inlined; the page loads no external stylesheet or script", () => {
+test("styling: Tailwind CSS is inlined; no external stylesheet or script, the only remote URL the credit links", () => {
   const html = renderReport(liveView(), now);
   assert.match(html, /<style>\/\*! tailwindcss v4[^<]*MIT License/, "the precompiled tailwind build, banner included");
   assert.ok(!/<link\b/i.test(html), "no <link> tags");
   assert.ok(!/<script[^>]+src=/i.test(html), "no external scripts");
-  assert.ok(!/(src|href)=["']?(https?:)?\/\//i.test(html), "no remote URLs");
+  assert.ok(!/src=["']?(https?:)?\/\//i.test(html), "nothing loaded from a remote URL");
+  const hrefs = [...html.matchAll(/href=["']?((https?:)?\/\/[^"' >]*)/gi)].map((m) => m[1]);
+  assert.deepEqual([...new Set(hrefs)], ["https://github.com/krishansubudhi/michelin"], "remote links: the repo only");
   assert.match(html, /prefers-color-scheme:\s?dark/, "dark mode");
   assert.match(html, /prefers-reduced-motion/, "reduced motion respected");
   assert.match(html, /<main class="page">/);
@@ -174,4 +176,27 @@ test("shortJudge: family and effort, unknown names unchanged", () => {
 
 test("styling: src/report/tailwind.gen.ts is up to date with src/report/report*.css (else run npm run css)", () => {
   assert.equal(TAILWIND_CSS, compileCss());
+});
+
+test("the run report has a slim grey credit line above the title and a 'Made with Michelin' footer, both linking the repo", () => {
+  const html = renderReport({
+    dir: ".runs/x",
+    run: { finished: "2026-11-18T00:00:00Z" },
+    constructor: null,
+    destructor: null,
+    sessions: {},
+    cujs: [],
+    raw: [],
+    unknown: [],
+  });
+  assert.match(
+    html,
+    /<\/main><footer class="made">Made with Michelin · <a href="https:\/\/github\.com\/krishansubudhi\/michelin">github\.com\/krishansubudhi\/michelin<\/a><\/footer>/,
+  );
+  assert.match(
+    html,
+    /<body><p class="made-top">Made with Michelin · npm i -g michelin-eval · <a href="https:\/\/github\.com\/krishansubudhi\/michelin">GitHub<\/a><\/p><header class="bar">/,
+  );
+  assert.match(TAILWIND_CSS, /\.made-top\{[^}]*font-size:var\(--text-xs\)[^}]*color:var\(--color-zinc-400\)/);
+  assert.match(TAILWIND_CSS, /\.made\{[^}]*font-size:var\(--text-xs\)[^}]*color:var\(--color-zinc-400\)/);
 });

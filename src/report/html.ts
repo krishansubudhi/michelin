@@ -17,6 +17,15 @@ export const esc = (s: unknown): string =>
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
   );
 
+/** The repo every report credits. */
+const REPO = "https://github.com/krishansubudhi/michelin";
+
+/** The slim credit line above the title of every report.html (run and compare): one line of small grey text. */
+export const TOPLINE_HTML = `<p class="made-top">Made with Michelin · npm i -g michelin-eval · <a href="${REPO}">GitHub</a></p>`;
+
+/** The credit line at the foot of every report.html (run and compare): small grey text with a link to the repo. */
+export const FOOTER_HTML = `<footer class="made">Made with Michelin · <a href="${REPO}">github.com/krishansubudhi/michelin</a></footer>`;
+
 /**
  * Format milliseconds for people. Pure.
  *

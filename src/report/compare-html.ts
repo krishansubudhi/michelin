@@ -6,7 +6,7 @@
 
 import type { Game, Row } from "../run/compare.ts";
 import { metricNames, secs, type Measure } from "../run/measures.ts";
-import { esc, fmtUsd } from "./html.ts";
+import { esc, FOOTER_HTML, fmtUsd, TOPLINE_HTML } from "./html.ts";
 import { TAILWIND_CSS } from "./tailwind.gen.ts";
 
 /**
@@ -84,11 +84,11 @@ export function compareHtml(rows: Row[], games: Game[], costUsd: number, measure
   );
   return (
     `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">` +
-    `<title>compare report</title><style>${TAILWIND_CSS}</style></head><body>` +
+    `<title>compare report</title><style>${TAILWIND_CSS}</style></head><body>${TOPLINE_HTML}` +
     `<header class="bar"><div class="bar-in"><h1>${esc(rows.map((r) => r.name).join(" vs "))}</h1>` +
     `<p class="muted">${games.length} game(s) · total judge cost ${esc(fmtUsd(costUsd))}</p></div></header>` +
     `<main class="page"><section class="card"><h2>Head-to-head</h2>` +
     `<div class="scroll"><table><thead><tr>${head}</tr></thead><tbody>${tr.join("")}</tbody></table></div>` +
-    `${games.map(gameHtml).join("")}</section>${measuresHtml(measures)}</main></body></html>`
+    `${games.map(gameHtml).join("")}</section>${measuresHtml(measures)}</main>${FOOTER_HTML}</body></html>`
   );
 }

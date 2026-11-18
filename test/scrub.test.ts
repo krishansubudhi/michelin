@@ -16,10 +16,9 @@ test("identifiers: run id, folder, subject, every model, setup NAME=value values
       judge: [{ model: "claude-opus-5-5", effort: "high" }],
     },
   };
-  const ids = identifiers(".runs/r1-2026", run, "set up ok\nMODEL=ollama/qwen3.8:27b\n  PORT = no\nX=ab", [
-    "laptop",
-    "zz",
-  ]);
+  const ids = identifiers(".runs/r1-2026", run, "set up ok\nMODEL=ollama/qwen3.8:27b\n  PORT = no\nX=ab", {
+    extra: ["laptop", "zz"],
+  });
   assert.deepEqual(ids, [
     "r1-2026",
     resolve(".runs/r1-2026"),
@@ -32,6 +31,23 @@ test("identifiers: run id, folder, subject, every model, setup NAME=value values
     "laptop",
   ]);
   assert.deepEqual(identifiers("/tmp/abc", {}), ["abc", "/tmp/abc"]);
+});
+
+test("an explicit --hide token is scrubbed whatever its length, whole words only; short automatic ones are not", () => {
+  const ids = identifiers("/tmp/abc", { subject: "v2" }, "X=v1", { extra: ["ab"], hide: ["v2", " v1 ", ""] });
+  assert.deepEqual(ids, ["abc", "/tmp/abc", "v2", "v1"]);
+  assert.deepEqual(variants("v2"), ["v2"]);
+  assert.equal(
+    scrub("TOY_VARIANT=v2 is broken; v20 and xv2 stay", [[["v2"], "Program B"]]),
+    "TOY_VARIANT=Program B is broken; v20 and xv2 stay",
+  );
+  assert.equal(
+    scrub("v1 vs V2", [
+      [["v1"], "A"],
+      [["v2"], "B"],
+    ]),
+    "A vs B",
+  );
 });
 
 test("variants: short forms of a model id; a path only whole", () => {
