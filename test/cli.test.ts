@@ -29,6 +29,11 @@ test("the word run is optional: michelin run s a.yaml is michelin s a.yaml", () 
   assert.deepEqual(parseCli(["run"]), parseCli([]));
 });
 
+test("michelin init is its own command; flags and extra words are ignored", () => {
+  assert.deepEqual(parseCli(["init"]), { command: "init" });
+  assert.deepEqual(parseCli(["init", "x", "--runs", "2"]), { command: "init" });
+});
+
 test("subject and CUJs may be left out: michelin.json supplies them", () => {
   const a = parseCli([]);
   assert.deepEqual([a?.subject, a?.picked], [undefined, []]);

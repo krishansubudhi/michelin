@@ -3,8 +3,7 @@
 //
 //   node src/run/runner.ts subjects/toy subjects/toy/cujs/toy/country.yaml   (--help for usage; `michelin` via bin/michelin.js)
 //   node src/run/runner.ts subjects/toy subjects/toy/cujs/toy/   (a folder: every *.yaml in it, sorted, each a fresh run)
-// Test: npm test (no LLM, ~1 s). Live: the second command above (one CUJ end to end).
-//
+// Test: npm test (no LLM, ~1 s). Live: the second command above (one CUJ end to end). `michelin init`: init.ts.
 // CUJ files or folders come from the command line or michelin.json's cujs; with none it prints usage and an error to stderr and exits 2 before any setup. Steps (spec line 4):
 //   a. constructor LLM reads <subject>/setup.md, runs it, seeds the CUJs' given (once; Setup, schemas.ts; given.ts)
 //   b. executor LLM gets howtorun.md + one CUJ instruction       (per CUJ, killed at timeout_s; ExecutorResult; runs in a fresh temp folder, told where the repo is so howtorun's relative paths resolve)
@@ -28,6 +27,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadConfig, type Settings } from "./settings.ts";
 import { USAGE, parseCli, pickTargets, runMain } from "./cli.ts";
+import { PKG_ROOT, init } from "./init.ts";
 import { llm, claudeVersion, toSession, type Llm, type Pick, type Session } from "../llm/models.ts";
 import { judgeCuj } from "../llm/judge.ts";
 import {
@@ -375,6 +375,7 @@ async function runOnce(subject: string, settings: Settings, cujs: (readonly [str
 async function main() {
   const args = parseCli(process.argv.slice(2));
   if (!args) return console.log(USAGE);
+  if (args.command === "init") return void init(process.cwd(), PKG_ROOT);
   const settingsPath = args.settingsPath && resolveArg(args.settingsPath);
   const { settings, runs: times, ...file } = loadConfig({ ...args, settingsPath, cwd: process.cwd() });
   const [subject, ...picked] = pickTargets(args, file).map((p) => resolveArg(p)); // or under MICHELIN_SUBJECTS

@@ -47,7 +47,7 @@ function parseRuns(s: string | undefined): number | undefined {
  * Parse the runner's command line.
  *
  * @param argv The arguments after `michelin`, i.e. process.argv.slice(2), e.g. ["run", "subjects/toy", "a.yaml"].
- * @returns    null if --help / -h was given; otherwise command "run", subject (undefined if none given), picked (CUJ
+ * @returns    null if --help / -h was given; {command: "init"} for `michelin init`; otherwise command "run", subject (undefined if none given), picked (CUJ
  *             files, maybe []), settingsPath (undefined unless --settings is given), judging: all (true with
  *             --all-judges) and baselines (the --baseline folders in order, [] if none), and flags {model, judges, runs}.
  * @throws     On an unknown flag; a UsageError (exit 2) on a bad --runs.
@@ -67,6 +67,7 @@ export function parseCli(argv: string[]) {
     },
   });
   if (values.help) return null;
+  if (positionals[0] === "init") return { command: "init" as const };
   const [subject, ...picked] = positionals[0] === "run" ? positionals.slice(1) : positionals;
   return {
     command: "run" as const,
