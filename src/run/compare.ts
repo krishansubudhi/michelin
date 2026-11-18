@@ -2,11 +2,13 @@
 //
 // Every pair of runs (round robin) meets on every CUJ both ran. A panel of judges sees the two journeys with every
 // identifier scrubbed to "Program A" / "Program B", once in each order (pair.ts), and picks the better one. The
-// games are tallied into a win rate and an Elo rating per run.
+// games are tallied into a win rate and an Elo rating per run. Each run's program time, wall time and any free-form
+// metrics its executor recorded (executor.json data.metrics) are tabled beside it; judges never see the metrics.
 //
 // Writes .runs/compare-<ISO>/ under the current folder:
-//   compare.json            the runs, judges, standings, every game and the total judge cost
-//   compare.md              the win-rate table, then each game's winner and every judge's reasons
+//   compare.json            the runs, judges, standings, every game, the total judge cost and per-run measures
+//   compare.md              the win-rate table, the game times, the times-and-metrics table, then each game's
+//                           winner and every judge's reasons
 //   report.html             the same as one page (compare-html.ts)
 //   <cuj>/<x>-vs-<y>/       judgePair's prompts and each judge's two verdicts
 //   llm.log                 the judges' CLI stderr
@@ -24,13 +26,19 @@ import { fmtUsd } from "../report/html.ts";
 import type { Loose } from "../report/view.ts";
 import { UsageError } from "./cli.ts";
 import { loadConfig, type Tiebreak } from "./settings.ts";
+import { measures, metricsTable, readMetrics, secs, wallMs, type Measure } from "./measures.ts";
 
-/** One run in a comparison: its name, folder, identifiers to hide, and per CUJ id its evidence and task. */
+export { measures, metricsTable, type Measure } from "./measures.ts";
+
+/**
+ * One run in a comparison: its name, folder, identifiers to hide, and per CUJ id its evidence and task, program time
+ * (ms), the executor call's wall time (wall) and the metrics it recorded, e.g. {tokens: "48210"}.
+ */
 export type Side = {
   name: string;
   dir: string;
   ids: string[];
-  cujs: Record<string, { evidence: Evidence; task: Task; ms?: number }>;
+  cujs: Record<string, { evidence: Evidence; task: Task; ms?: number; wall?: number; metrics: Record<string, string> }>;
 };
 
 /** One game: two runs (by name) on one CUJ, the panel's winner (null: no valid verdict) and each judge's verdicts. */
@@ -136,17 +144,20 @@ export function speedBreak(
  * @param dir The run folder.
  * @param id  The CUJ id, e.g. "toy-country".
  * @param run Its run.json; defs[id].instruction is the instruction.
- * @returns   evidence (an unreadable executor.json becomes a reply saying so) and task, whose expectations are the
- *            <id>/verdict.json texts, [] if none.
+ * @returns   evidence (an unreadable executor.json becomes a reply saying so), task, whose expectations are the
+ *            <id>/verdict.json texts ([] if none), program time, wall time and metrics.
  */
 function cujEntry(dir: string, id: string, run: Loose): Side["cujs"][string] {
   const ev = readEvidence(join(dir, id));
   const verdict = readJson(join(dir, id, "verdict.json"));
+  const executor = readJson(join(dir, id, "executor.json"));
   const expectations = Array.isArray(verdict) ? verdict.map((o) => String(o?.expectation ?? "")) : [];
   return {
     evidence: ev.error === undefined ? ev : { journey: "", reply: `(evidence unreadable: ${ev.error})` },
     task: { instruction: String(run.defs?.[id]?.instruction ?? ""), expectations },
     ms: stepMs(join(dir, id)),
+    wall: wallMs(executor),
+    metrics: readMetrics(executor),
   };
 }
 
@@ -248,14 +259,6 @@ export function table(rows: Row[]): string {
 }
 
 /**
- * Milliseconds as seconds for a table. Pure.
- *
- * @param ms e.g. 41234, or undefined.
- * @returns  e.g. "41.2 s", or "?" when unknown.
- */
-const secs = (ms?: number) => (ms === undefined ? "?" : `${(ms / 1000).toFixed(1)} s`);
-
-/**
  * Every game in one markdown table with both runs' program times. Pure.
  *
  * @param games The games, e.g. [{cuj: "toy-country", a: "gemma", b: "qwen", winner: "a", ms: {a: 4000}}].
@@ -274,14 +277,15 @@ export function timeTable(games: Game[]): string {
 }
 
 /**
- * The comparison as markdown: the table, the total judge cost, then each game's winner and judges' reasons. Pure.
+ * The comparison as markdown: the tables, the total judge cost, then each game's winner and judges' reasons. Pure.
  *
- * @param rows    From standings().
- * @param games   The games; each judge saw A/B, reported here with the run names restored.
- * @param costUsd Total judge cost in USD, e.g. 0.42.
- * @returns       The markdown, no # title line.
+ * @param rows     From standings().
+ * @param games    The games; each judge saw A/B, reported here with the run names restored.
+ * @param costUsd  Total judge cost in USD, e.g. 0.42.
+ * @param measures Every run's times and metrics per CUJ, from measures(); [] (the default) leaves that table out.
+ * @returns        The markdown, no # title line.
  */
-export function compareMd(rows: Row[], games: Game[], costUsd: number): string {
+export function compareMd(rows: Row[], games: Game[], costUsd: number, measures: Measure[] = []): string {
   const name = (g: Game, side: string | null, first: "A" | "B") =>
     side === "tie" ? "tie" : side === null ? "no valid verdict" : side === first ? g.a : g.b;
   const game = (g: Game) => {
@@ -296,7 +300,13 @@ export function compareMd(rows: Row[], games: Game[], costUsd: number): string {
     return `## ${g.cuj}: ${g.a} vs ${g.b}\n\nWinner: ${won}${how}\n\n${t}\n\n${judges.join("\n")}`;
   };
   return (
-    [table(rows), timeTable(games), `Total judge cost: ${fmtUsd(costUsd)}`, ...games.map(game)].join("\n\n") + "\n"
+    [
+      table(rows),
+      timeTable(games),
+      ...(measures.length ? [metricsTable(measures)] : []),
+      `Total judge cost: ${fmtUsd(costUsd)}`,
+      ...games.map(game),
+    ].join("\n\n") + "\n"
   );
 }
 
@@ -315,7 +325,8 @@ const safe = (s: string) => s.replace(/[^\w.-]/g, "_");
  * @param args From parseCli: runs ("dir" or "name=dir"), settingsPath, flags.judges and flags.tiebreak, hide.
  * @param llm  How to call an LLM: the real llm(), or a test fake.
  * @param cwd  Where relative paths start and .runs/compare-<ISO>/ is made, e.g. process.cwd().
- * @returns    The out folder, the standings, the games and the total judge cost in USD.
+ * @returns    The out folder, the standings, the games and the total judge cost in USD; compare.json also holds every
+ *             run's times and metrics per CUJ (measures).
  * @throws     A UsageError on clashing run names; an Error on a run folder without run.json or bad settings.
  */
 export async function compareMain(
@@ -355,9 +366,13 @@ export async function compareMain(
     games,
   );
   const runs = sides.map(({ name, dir }) => ({ name, dir }));
-  writeFileSync(join(out, "compare.json"), JSON.stringify({ runs, judges, rows, games, costUsd }, null, 2));
-  writeFileSync(join(out, "compare.md"), compareMd(rows, games, costUsd));
-  writeFileSync(join(out, "report.html"), compareHtml(rows, games, costUsd));
+  const ms = measures(sides);
+  writeFileSync(
+    join(out, "compare.json"),
+    JSON.stringify({ runs, judges, rows, games, costUsd, measures: ms }, null, 2),
+  );
+  writeFileSync(join(out, "compare.md"), compareMd(rows, games, costUsd, ms));
+  writeFileSync(join(out, "report.html"), compareHtml(rows, games, costUsd, ms));
   console.log(`${table(rows)}\n\n${games.length} game(s), total judge cost ${fmtUsd(costUsd)}\ncompare dir: ${out}`);
   return { out, rows, games, costUsd };
 }

@@ -43,6 +43,12 @@ test("the executor prompt has the instruction, never expectations", () => {
   for (const e of cuj.expectations) assert.ok(!p.includes(e), `leaked expectation: ${e}`);
 });
 
+test("the executor prompt asks for metrics: [] unless the how-to-run names some", () => {
+  const p = executorPrompt("HOWTO", { instruction: "do it" }, "/repo");
+  assert.match(p, /Return metrics: \[\] unless the how-to-run above names metrics/);
+  assert.match(p, /\{name: "tokens", value: "48210"\}/);
+});
+
 test("executor prompt includes setup output", () => {
   assert.ok(
     executorPrompt("HOWTO", { instruction: "do it" }, "/repo", { setup: "PORT=8792\nTOKEN=abc" }).includes("PORT=8792"),
@@ -130,7 +136,7 @@ function fake(reply: (model: string, prompt: string) => unknown) {
 }
 const PASS = { verdicts: [{ pass: true, why: "seen" }] };
 const SETUP_OK = { ok: true, steps: ["checked"], notes: "" };
-const DID = { steps: [{ action: "run", input: "q", got: "a", ms: 3 }], reply: "did it" };
+const DID = { steps: [{ action: "run", input: "q", got: "a", ms: 3 }], reply: "did it", metrics: [] };
 const CLEAN = { ok: true, cleaned: [], notes: "" };
 const happy = (m: string) => (m === "C" ? SETUP_OK : m === "E" ? DID : m === "J" ? PASS : CLEAN);
 const ok2 = { "chat-one": "passed 1/1", "chat-two": "passed 1/1" };
@@ -220,7 +226,7 @@ test("an invalid executor result is an error, never a pass; the next CUJ still r
       ? SETUP_OK
       : m === "E"
         ? p.includes("Your task:\n\none")
-          ? { steps: "nope", reply: 1 }
+          ? { steps: "nope", reply: 1, metrics: [] }
           : DID
         : m === "J"
           ? PASS

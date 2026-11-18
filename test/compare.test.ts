@@ -13,6 +13,8 @@ import {
   roundRobin,
   speedBreak,
   standings,
+  measures,
+  metricsTable,
   stepMs,
   timeTable,
   type Game,
@@ -40,10 +42,24 @@ function fakeRun(root: string, id: string, model: string, reply: string): string
   writeFileSync(join(dir, "run.json"), JSON.stringify({ subject: "subjects/opencode", settings, defs }));
   writeFileSync(join(dir, "constructor.json"), JSON.stringify({ ok: true, data: { notes: `MODEL=${model}` } }));
   const steps = [{ action: "run", input: `${model} 6+7`, got: reply, ms: 5 }];
-  writeFileSync(join(dir, "math-add", "executor.json"), JSON.stringify({ ok: true, data: { steps, reply } }));
+  const executor = { ok: true, data: { steps, reply, metrics: [] } };
+  writeFileSync(join(dir, "math-add", "executor.json"), JSON.stringify(executor));
   const verdict = [{ expectation: "The reply says 13.", votes: {}, pass: true }];
   writeFileSync(join(dir, "math-add", "verdict.json"), JSON.stringify(verdict));
   return dir;
+}
+
+/**
+ * Give a fake run's CUJ a wall time and metrics by rewriting its executor.json.
+ *
+ * @param dir     The run folder from fakeRun.
+ * @param ms      The executor call's wall ms, e.g. 9000.
+ * @param metrics The recorded metrics, e.g. [{name: "tokens", value: "123"}]; malformed ones are allowed.
+ */
+function withMetrics(dir: string, ms: number, metrics: unknown[]): void {
+  const f = join(dir, "math-add", "executor.json");
+  const e = JSON.parse(readFileSync(f, "utf8"));
+  writeFileSync(f, JSON.stringify({ ...e, ms, data: { ...e.data, metrics } }));
 }
 
 /** A fake judge: picks the program whose final reply says "13", else tie; records every prompt. */
@@ -189,4 +205,43 @@ test("stepMs sums the executor steps' ms; timeTable shows seconds and marks a sp
   assert.equal(stepMs(join(dir, "none")), undefined);
   const g: Game = { cuj: "c", a: "x", b: "y", winner: "a", judges: {}, ms: { a: 1500 }, bySpeed: true };
   assert.match(timeTable([g]), /\| c \| x \| y \| 1\.5 s \| \? \| x \(speed\) \|/);
+});
+
+test("metrics: a recorded metric becomes a column; wall time is executor.json's top-level ms; judges never see it", async (t) => {
+  t.mock.method(console, "log", () => {});
+  const cwd = mkdtempSync(join(tmpdir(), "cmp-"));
+  const metrics = [{ name: "tokens", value: "123" }, { name: "bad" }, { name: "cost", value: "a|b" }];
+  const good = fakeRun(cwd, "run-good", "ollama/gemma4:26b-mlx", "It said 13.");
+  const bad = fakeRun(cwd, "run-bad", "ollama/qwen3.8:27b", "It said 12.");
+  withMetrics(good, 9000, metrics);
+  const sides = [loadSide(good, "g"), loadSide(bad, "b")];
+  assert.deepEqual([sides[0].cujs["math-add"].wall, sides[1].cujs["math-add"].wall], [9000, undefined]);
+  const tbl = metricsTable(measures(sides)).split("\n");
+  assert.equal(tbl[0], "| CUJ | run | program time | wall time | tokens | cost |");
+  assert.equal(tbl[2], "| math-add | g | 0.0 s | 9.0 s | 123 | a\\|b |");
+  assert.equal(tbl[3], "| math-add | b | 0.0 s | ? | ? | ? |");
+  const prompts: string[] = [];
+  const r = await compareMain(
+    { runs: [`g=${good}`, `b=${bad}`], flags: { judges: "J@high" }, hide: [] },
+    fakeJudge(prompts),
+    cwd,
+  );
+  const md = readFileSync(join(r.out, "compare.md"), "utf8");
+  assert.match(
+    md,
+    /\| CUJ \| run \| program time \| wall time \| tokens \| cost \|\n[\s\S]*\| math-add \| g \| 0\.0 s \| 9\.0 s \| 123 \|/,
+  );
+  assert.ok(md.indexOf("wall time") < md.indexOf("Total judge cost"));
+  const json = JSON.parse(readFileSync(join(r.out, "compare.json"), "utf8"));
+  assert.deepEqual(json.measures[0].metrics, { tokens: "123", cost: "a|b" });
+  assert.match(
+    readFileSync(join(r.out, "report.html"), "utf8"),
+    /Times and metrics[\s\S]*<th scope="col">tokens<\/th>/,
+  );
+  for (const p of prompts) assert.doesNotMatch(p, /tokens|123/, "metrics never reach a judge");
+});
+
+test("metricsTable: runs with no metrics get exactly the time columns", () => {
+  const sides = [fakeRun(mkdtempSync(join(tmpdir(), "cmp-")), "r", "m", "x")].map((d) => loadSide(d, "r"));
+  assert.equal(metricsTable(measures(sides)).split("\n")[0], "| CUJ | run | program time | wall time |");
 });

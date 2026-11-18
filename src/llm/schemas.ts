@@ -31,9 +31,15 @@ export const SETUP: Schema = obj({ ok: bool, steps: list(str), notes: str });
 
 /** One call the executor made to the subject. */
 export type Step = { action: string; input: string; got: string; ms: number };
-/** The executor's result: every call it made, then a short account. */
-export type ExecutorResult = { steps: Step[]; reply: string };
-export const EXECUTOR: Schema = obj({ steps: list(obj({ action: str, input: str, got: str, ms: num })), reply: str });
+/** One free-form metric the subject's how-to-run asked the executor to record, e.g. {name: "tokens", value: "48210"}. */
+export type Metric = { name: string; value: string };
+/** The executor's result: every call it made, a short account, and any metrics the how-to-run names ([] if none). */
+export type ExecutorResult = { steps: Step[]; reply: string; metrics: Metric[] };
+export const EXECUTOR: Schema = obj({
+  steps: list(obj({ action: str, input: str, got: str, ms: num })),
+  reply: str,
+  metrics: list(obj({ name: str, value: str })),
+});
 
 /** The destructor's result: did teardown work, what it cleaned, anything worth knowing. */
 export type Teardown = { ok: boolean; cleaned: string[]; notes: string };

@@ -6,7 +6,7 @@ import { SETUP, EXECUTOR, TEARDOWN, JUDGE, validate, check } from "../src/llm/sc
 
 const valid = [
   [SETUP, { ok: false, steps: ["checked python"], notes: "harness not found: x.py" }],
-  [EXECUTOR, { steps: [{ action: "run", input: "q", got: "a", ms: 12 }], reply: "asked once" }],
+  [EXECUTOR, { steps: [{ action: "run", input: "q", got: "a", ms: 12 }], reply: "asked once", metrics: [] }],
   [TEARDOWN, { ok: true, cleaned: [], notes: "" }],
   [JUDGE, { verdicts: [{ pass: true, why: "it said USA" }] }],
 ] as const;
@@ -20,12 +20,18 @@ test("a malformed result names the first bad field", () => {
   assert.equal(validate(SETUP, { ok: true, steps: [] }), "$.notes: missing");
   assert.equal(validate(TEARDOWN, { ok: true, cleaned: [], notes: "", extra: 1 }), "$.extra: unexpected field");
   assert.equal(
-    validate(EXECUTOR, { steps: [{ action: "run", input: "q", got: "a", ms: "12" }], reply: "" }),
+    validate(EXECUTOR, { steps: [{ action: "run", input: "q", got: "a", ms: "12" }], reply: "", metrics: [] }),
     "$.steps[0].ms: expected number",
   );
-  assert.equal(validate(EXECUTOR, { steps: {}, reply: "" }), "$.steps: expected array");
+  assert.equal(validate(EXECUTOR, { steps: {}, reply: "", metrics: [] }), "$.steps: expected array");
   assert.equal(validate(JUDGE, "text"), "$: expected object");
   assert.equal(validate(JUDGE, [1]), "$: expected object");
+});
+
+test("EXECUTOR: accepts metrics; a metric missing value is refused", () => {
+  const steps = [{ action: "run", input: "q", got: "a", ms: 12 }];
+  assert.equal(validate(EXECUTOR, { steps, reply: "", metrics: [{ name: "tokens", value: "48210" }] }), null);
+  assert.equal(validate(EXECUTOR, { steps, reply: "", metrics: [{ name: "tokens" }] }), "$.metrics[0].value: missing");
 });
 
 test("check: valid data is ok; an error, no data or invalid data is never ok", () => {

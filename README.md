@@ -8,6 +8,7 @@
 
 - **Journeys, not unit asserts.** A CUJ is a few lines of yaml: what a user does and what should be true afterwards. An LLM sets your agent up, drives it, and tears it down.
 - **Judges see evidence, not vibes.** Judges score each expectation from the recorded steps alone; extra judges join and vote when the first one fails or flips.
+- **Any metric you care about.** A subject's how-to-run can name any metric (cost, tokens, steps) for the executor to record; `michelin compare` shows them as columns beside wall time, and judges never see them.
 - **Trust checks built in.** Every suite ships a must-fail control. If it ever passes, the judges are rubber-stamping.
 
 ## Quickstart

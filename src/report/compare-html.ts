@@ -1,9 +1,11 @@
-// Compare page: `michelin compare`'s report.html, the win-rate table and every game's reasons as one page. Pure.
+// Compare page: `michelin compare`'s report.html, the win-rate table, every game's reasons and the times-and-metrics
+// table as one page. Pure.
 // Styled like the run report (render.ts): the same precompiled Tailwind and header bar.
 //
 // Test: npm test (compare-html.test.ts, no LLM).
 
 import type { Game, Row } from "../run/compare.ts";
+import { metricNames, secs, type Measure } from "../run/measures.ts";
 import { esc, fmtUsd } from "./html.ts";
 import { TAILWIND_CSS } from "./tailwind.gen.ts";
 
@@ -26,7 +28,6 @@ function named(g: Game, letter: string | null, aIs: "A" | "B"): string {
  * @returns HTML.
  */
 function gameHtml(g: Game): string {
-  const secs = (ms?: number) => (ms === undefined ? "?" : `${(ms / 1000).toFixed(1)} s`);
   const won = g.winner === null ? "no valid verdict" : g.winner === "tie" ? "tie" : g.winner === "a" ? g.a : g.b;
   const judges = Object.entries(g.judges).map(
     ([m, v]) =>
@@ -42,14 +43,39 @@ function gameHtml(g: Game): string {
 }
 
 /**
+ * The times-and-metrics section: one row per run per CUJ, program time, wall time, then one column per metric. Pure.
+ *
+ * @param ms The measures, e.g. [{cuj: "toy-country", run: "gemma", ms: 4000, wall: 9000, metrics: {tokens: "123"}}].
+ * @returns  HTML, "" when ms is empty; a missing metric shows "?".
+ */
+export function measuresHtml(ms: Measure[]): string {
+  if (!ms.length) return "";
+  const names = metricNames(ms);
+  const head = ["CUJ", "run", "program time", "wall time", ...names].map((h) => `<th scope="col">${esc(h)}</th>`);
+  const tr = ms.map(
+    (m) =>
+      `<tr><th scope="row">${esc(m.cuj)}</th><td>${esc(m.run)}</td><td>${secs(m.ms)}</td><td>${secs(m.wall)}</td>` +
+      names.map((n) => `<td>${esc(m.metrics[n] ?? "?")}</td>`).join("") +
+      `</tr>`,
+  );
+  return (
+    `<section class="card"><h2>Times and metrics</h2>` +
+    `<div class="scroll"><table><thead><tr>${head.join("")}</tr></thead><tbody>${tr.join("")}</tbody></table></div>` +
+    `</section>`
+  );
+}
+
+/**
  * The whole compare page. Pure.
  *
  * @param rows    The standings, best first, e.g. [{name: "gemma", wins: 1, losses: 0, ties: 0, games: 1, winRate: 1, elo: 1016}].
  * @param games   Every game, e.g. [{cuj: "toy-country", a: "gemma", b: "qwen", winner: "a", judges: {...}}].
  * @param costUsd Total judge cost in USD, e.g. 0.42.
+ * @param measures Every run's times and metrics per CUJ, e.g. [{cuj: "toy-country", run: "gemma", ms: 4000,
+ *                 metrics: {tokens: "123"}}]; [] (the default) leaves the "Times and metrics" section out.
  * @returns       The full HTML document.
  */
-export function compareHtml(rows: Row[], games: Game[], costUsd: number): string {
+export function compareHtml(rows: Row[], games: Game[], costUsd: number, measures: Measure[] = []): string {
   const head = ["run", "W-L-T", "win rate", "Elo"].map((h) => `<th scope="col">${h}</th>`).join("");
   const tr = rows.map(
     (r) =>
@@ -63,6 +89,6 @@ export function compareHtml(rows: Row[], games: Game[], costUsd: number): string
     `<p class="muted">${games.length} game(s) · total judge cost ${esc(fmtUsd(costUsd))}</p></div></header>` +
     `<main class="page"><section class="card"><h2>Head-to-head</h2>` +
     `<div class="scroll"><table><thead><tr>${head}</tr></thead><tbody>${tr.join("")}</tbody></table></div>` +
-    `${games.map(gameHtml).join("")}</section></main></body></html>`
+    `${games.map(gameHtml).join("")}</section>${measuresHtml(measures)}</main></body></html>`
   );
 }

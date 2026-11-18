@@ -21,3 +21,15 @@ test("compareHtml: header bar, Head-to-head table, cost, and each game's verdict
   assert.match(html, /g&lt;1&gt; shown as A: g&lt;1&gt;\. A said 13[\s\S]*shown as B: g&lt;1&gt;\. B said 13/);
   assert.doesNotMatch(html, /<1>/);
 });
+
+test("compareHtml: measures add a Times and metrics table with a column per metric; none leaves it out", () => {
+  const rows = [{ name: "g", wins: 0, losses: 0, ties: 0, games: 0, winRate: 0, elo: 1000 }];
+  const m = { cuj: "c", run: "g", ms: 1500, wall: 9000, metrics: { "<tok>": "1<2" } };
+  const html = compareHtml(rows, [], 0, [m]);
+  assert.match(
+    html,
+    /<h2>Times and metrics<\/h2>[\s\S]*<th scope="col">wall time<\/th><th scope="col">&lt;tok&gt;<\/th>/,
+  );
+  assert.match(html, /<th scope="row">c<\/th><td>g<\/td><td>1\.5 s<\/td><td>9\.0 s<\/td><td>1&lt;2<\/td>/);
+  assert.doesNotMatch(compareHtml(rows, [], 0), /Times and metrics/);
+});

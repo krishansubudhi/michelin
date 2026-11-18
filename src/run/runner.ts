@@ -14,7 +14,7 @@
 // The subject's own install and temp state go in /tmp/michelin/runs/<runid>/ (scratch.ts): made before setup, named in the constructor's and destructor's prompts, deleted after the run. Everything else lands in .runs/<runid>/ (spec line 5):
 //   run.json                    the typed index: subject, settings, claude version, setup, statuses, scores, sessions, outputs, times
 //   constructor.json / destructor.json   their checked results ({ok, data} or {ok:false, error}, plus raw text)
-//   <cuj-id>/executor.json      the executor's checked result: steps [{action, input, got, ms}] and reply; files a step saved for the record (screenshots) sit beside it
+//   <cuj-id>/executor.json      the executor's checked result: steps [{action, input, got, ms}], reply and metrics [{name, value}]; files a step saved for the record (screenshots) sit beside it
 //   <cuj-id>/judge-<model>-<effort>.json  each judge's checked result
 //   <cuj-id>/verdict.json       per expectation: every vote, the majority
 //   report.html                 everything above as one page (report.ts)
@@ -93,7 +93,7 @@ export const executorPrompt = (
     "Your task:",
     cuj.instruction,
     'Return steps: one per call you made to the program, each {action: what you did, e.g. "run"; input: what you sent; got: what it printed, verbatim and in full (never shorten it, summarise it or elide any part with "..." or "{...}": a judge sees only what you put here); ms: how long it took}.',
-    "Measure ms, never estimate it: time each call, e.g. s=$(date +%s%N); <command>; echo $(( ($(date +%s%N) - s) / 1000000 )).",
+    'Measure ms, never estimate it: time each call, e.g. s=$(date +%s%N); <command>; echo $(( ($(date +%s%N) - s) / 1000000 )).\n\nReturn metrics: [] unless the how-to-run above names metrics to record (cost, tokens, steps, anything); then one {name, value} per metric it names, read the way it says, value as a string (e.g. {name: "tokens", value: "48210"}).',
     `If a step needs a browser, read ${skill} first.`,
     ...(out ? [`Save files for the record (e.g. screenshots) in ${out}; name each path in its step's got.`] : []),
     "Then reply: a short account of what happened.",

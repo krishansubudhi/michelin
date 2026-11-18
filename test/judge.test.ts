@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { judgePrompt, checkJudge, tally, judgeCuj, escalate, readBaseline } from "../src/llm/judge.ts";
+import { judgePrompt, checkJudge, tally, judgeCuj, escalate, readBaseline, readEvidence } from "../src/llm/judge.ts";
 import { JUDGE, type Vote } from "../src/llm/schemas.ts";
 
 const yes: Vote = { pass: true, why: "a" };
@@ -138,6 +138,20 @@ test("a garbled executor.json errors the CUJ without calling a judge", async () 
   assert.equal(r.score, "unjudged");
   assert.match(r.error ?? "", /executor\.json is not valid JSON/);
   assert.deepEqual(r.sessions, {});
+});
+
+test("readEvidence never shows a judge the executor's metrics", () => {
+  const out = mkdtempSync(join(tmpdir(), "judge-"));
+  const data = {
+    steps: [{ action: "run", input: "q", got: "a", ms: 1 }],
+    reply: "r",
+    metrics: [{ name: "tokens", value: "98765" }],
+  };
+  writeFileSync(join(out, "executor.json"), JSON.stringify({ ok: true, ms: 5, data }));
+  const ev = readEvidence(out);
+  assert.equal(ev.error, undefined);
+  assert.match(JSON.stringify(ev), /"journey":.*"reply":"r"/);
+  assert.doesNotMatch(JSON.stringify(ev), /tokens|98765/);
 });
 
 test("escalate: on a missing result, any fail, or a flip from a known baseline verdict", () => {
