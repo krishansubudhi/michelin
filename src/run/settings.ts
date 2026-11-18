@@ -1,5 +1,8 @@
-// Settings: which model plays each role, and at what effort. The built-in defaults are defaults/settings.json in
-// this package (found from import.meta.url, never the current folder), or the file given with --settings <file> (runner.ts).
+// Settings: which model plays each role, and at what effort, plus the run's subject, CUJs and repeat count.
+// Each top-level field comes from the first that has it: command-line flags (--model, --judges, --runs), then
+// ./michelin.json (or the file given with --settings <file> instead), then the built-in defaults/settings.json in
+// this package (found from import.meta.url, never the current folder). michelin.json may hold any subset of the
+// roles below plus subject (string), cujs (list of strings) and runs (whole number >= 1).
 // Every entry is {"model": "<id>", "effort": "<low|medium|high|xhigh|max>"}.
 //
 //   constructor  runs <subject>/setup.md         (one entry)
@@ -7,12 +10,13 @@
 //   destructor   runs <subject>/teardown.md      (one entry)
 //   judge        scores the journeys             (list of entries: the first alone, all + majority vote on a fail)
 //
-// loadSettings throws if a role is missing or an entry is mistyped, naming the file it came from,
-// so a typo fails at start instead of mid-run.
+// loadSettings and loadConfig throw if a role is missing, a field unknown or an entry mistyped, naming the file it
+// came from, so a typo fails at start instead of mid-run.
 //
 // Test: node --test test/settings.test.ts
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { EFFORTS, type Pick } from "../llm/models.ts";
 import type { Judging } from "../llm/judge.ts";
@@ -94,4 +98,106 @@ export function loadSettings(path = DEFAULTS, judging?: Judging): Settings {
   const s = readJson(path);
   checkFields(s, path);
   return judging ? { ...(s as Settings), judging } : (s as Settings);
+}
+
+/** What the command line may set: --model "m" or "m@effort", --judges "a,b@effort", --runs N. */
+export type Flags = { model?: string; judges?: string; runs?: number };
+
+/** A resolved run: models per role, and the subject, CUJs and repeat count from michelin.json or flags. */
+export type Config = {
+  /** Models per role, checked, plus judging when given. */
+  settings: Settings;
+  /** Subject folder from michelin.json, e.g. "subjects/toy"; undefined if it names none. */
+  subject?: string;
+  /** CUJ files or folders from michelin.json, e.g. ["subjects/toy/cujs/toy/"]; [] if none. */
+  cujs: string[];
+  /** How many times to run every CUJ, e.g. 3; default 1. */
+  runs: number;
+};
+
+/** Per extra michelin.json field: a check of its value and what it must be. */
+const EXTRA: Record<string, [(v: unknown) => boolean, string]> = {
+  subject: [(v) => typeof v === "string" && v !== "", "a non-empty string"],
+  cujs: [(v) => Array.isArray(v) && v.every((c) => typeof c === "string"), "a list of strings"],
+  runs: [(v) => Number.isInteger(v) && (v as number) >= 1, "a whole number >= 1"],
+};
+
+/**
+ * Check one field of a michelin.json-style file.
+ *
+ * @param k    The field, e.g. "runs".
+ * @param v    Its value, e.g. 3.
+ * @param path The file, named in the error, e.g. "michelin.json".
+ * @throws     If the field is unknown or its value has the wrong type; the error names the file and the field.
+ */
+function checkField(k: string, v: unknown, path: string): void {
+  if (Object.hasOwn(EXTRA, k)) {
+    const [ok, what] = EXTRA[k];
+    if (!ok(v)) throw new Error(`${path}: field "${k}" must be ${what}`);
+  } else if (!FIELDS.includes(k)) {
+    throw new Error(`${path}: unknown field "${k}"; allowed: ${[...FIELDS, ...Object.keys(EXTRA)].join(", ")}`);
+  } else if (k === "judge" ? !(Array.isArray(v) && v.length > 0 && v.every(isPick)) : !isPick(v)) {
+    const what = k === "judge" ? "a non-empty list of {model, effort}" : "{model, effort}";
+    throw new Error(`${path}: field "${k}" must be ${what}; effort is one of ${EFFORTS.join(", ")}`);
+  }
+}
+
+/**
+ * Parse a --model or --judges entry.
+ *
+ * @param s      "model" or "model@effort", e.g. "claude-sonnet-5-5@high".
+ * @param effort The effort when none is given, e.g. "medium".
+ * @param flag   The flag it came from, named in the error, e.g. "--model".
+ * @returns      The pick, e.g. {model: "claude-sonnet-5-5", effort: "high"}.
+ * @throws       If the model is empty or the effort isn't one of EFFORTS.
+ */
+function parsePick(s: string, effort: Pick["effort"], flag: string): Pick {
+  const [model, e = effort] = s.trim().split("@");
+  const p = { model, effort: e };
+  if (!model || !isPick(p))
+    throw new Error(`${flag}: "${s}" must be model or model@effort; effort is one of ${EFFORTS.join(", ")}`);
+  return p;
+}
+
+/**
+ * Merge the three sources of settings, field by field: flags win over the file, the file over the defaults.
+ * Pure: reads nothing.
+ *
+ * @param defaults The built-in settings, e.g. loadSettings() of defaults/settings.json.
+ * @param file     The parsed michelin.json (or --settings file), any subset of fields, e.g. {runs: 2}; {} if none.
+ * @param flags    From the command line, e.g. {model: "claude-sonnet-5-5@high", judges: "claude-opus-5-5", runs: 3}.
+ * @param path     The file, named in every error, e.g. "michelin.json".
+ * @returns        The merged config; settings carry no judging (loadConfig adds it).
+ * @throws         If the file isn't an object, holds an unknown or mistyped field, or a flag entry is malformed.
+ */
+export function resolveSettings(defaults: Settings, file: unknown, flags: Flags, path: string): Config {
+  if (typeof file !== "object" || file === null || Array.isArray(file))
+    throw new Error(`${path}: must be a JSON object`);
+  const f = file as Record<string, unknown>;
+  for (const [k, v] of Object.entries(f)) checkField(k, v, path);
+  const roles = Object.fromEntries(
+    FIELDS.map((k) => [k, Object.hasOwn(f, k) ? f[k] : defaults[k as keyof Settings]]),
+  ) as Settings;
+  if (flags.model) roles.executor = parsePick(flags.model, roles.executor.effort, "--model");
+  if (flags.judges) roles.judge = flags.judges.split(",").map((j) => parsePick(j, "high", "--judges"));
+  checkFields(roles, path);
+  const subject = f.subject as string | undefined;
+  return { settings: roles, subject, cujs: (f.cujs as string[]) ?? [], runs: flags.runs ?? (f.runs as number) ?? 1 };
+}
+
+/**
+ * Read the defaults and ./michelin.json (or the --settings file instead), then merge in the flags (resolveSettings).
+ *
+ * @param opts settingsPath: the --settings file, e.g. "my.json" (relative to cwd); omitted: cwd/michelin.json if it
+ *             exists, else defaults alone. flags: from the command line, e.g. {runs: 2}. cwd: the folder holding
+ *             michelin.json, e.g. process.cwd(). judging: how the judges are used, e.g. {all: false, baselines: []}.
+ * @returns    The resolved config, with judging on its settings if given.
+ * @throws     If a file is missing (only a named --settings file), not valid JSON, or holds a bad field.
+ */
+export function loadConfig(opts: { settingsPath?: string; flags: Flags; cwd: string; judging?: Judging }): Config {
+  const { settingsPath, flags, cwd, judging } = opts;
+  const path = settingsPath ? resolve(cwd, settingsPath) : resolve(cwd, "michelin.json");
+  const file = settingsPath || existsSync(path) ? readJson(path) : {};
+  const c = resolveSettings(loadSettings(), file, flags, path);
+  return judging ? { ...c, settings: { ...c.settings, judging } } : c;
 }

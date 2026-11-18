@@ -3,17 +3,16 @@
 //
 //   node src/run/runner.ts subjects/toy subjects/toy/cujs/toy/country.yaml   (--help for usage; `michelin` via bin/michelin.js)
 //   node src/run/runner.ts subjects/toy subjects/toy/cujs/toy/   (a folder: every *.yaml in it, sorted, each a fresh run)
-//
 // Test: npm test (no LLM, ~1 s). Live: the second command above (one CUJ end to end).
 //
-// CUJ files or folders must be listed; with none given it prints usage and an error to stderr and exits 2 before any setup. Steps (spec line 4):
+// CUJ files or folders come from the command line or michelin.json's cujs; with none it prints usage and an error to stderr and exits 2 before any setup. Steps (spec line 4):
 //   a. constructor LLM reads <subject>/setup.md, runs it, seeds the CUJs' given (once; Setup, schemas.ts; given.ts)
 //   b. executor LLM gets howtorun.md + one CUJ instruction       (per CUJ, killed at timeout_s; ExecutorResult; runs in a fresh temp folder, told where the repo is so howtorun's relative paths resolve)
 //   c. destructor LLM reads <subject>/teardown.md and cleans up  (once, always; Teardown)
 //   d. settings.judge scores each CUJ that ran, in parallel with c (judge.ts: first judge, all + majority on a fail or flip)
 // Every role returns typed JSON (claude --json-schema), validated on arrival; an invalid result is an error. A failed setup skips every CUJ (no executor, no judge), still destructs, and exits 1.
 //
-// CUJ files are found and checked in cujs.ts. The runner itself has no LLM. Only the judges see a CUJ's expectations; they run alongside teardown, reading saved outputs, never the subject. Models come from defaults/settings.json via settings.ts.
+// CUJ files are found and checked in cujs.ts. The runner itself has no LLM. Only the judges see a CUJ's expectations; they run alongside teardown, reading saved outputs, never the subject. Models come from flags, ./michelin.json, then defaults/settings.json via settings.ts (--runs n repeats it all n times).
 // The subject's own install and temp state go in /tmp/michelin/runs/<runid>/ (scratch.ts): made before setup, named in the constructor's and destructor's prompts, deleted after the run. Everything else lands in .runs/<runid>/ (spec line 5):
 //   run.json                    the typed index: subject, settings, claude version, setup, statuses, scores, sessions, outputs, times
 //   constructor.json / destructor.json   their checked results ({ok, data} or {ok:false, error}, plus raw text)
@@ -27,8 +26,8 @@ import { setupReport } from "./setup-report.ts";
 import { readFileSync, writeFileSync, mkdirSync, appendFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadSettings, type Settings } from "./settings.ts";
-import { USAGE, parseCli, runMain } from "./cli.ts";
+import { loadConfig, type Settings } from "./settings.ts";
+import { USAGE, parseCli, pickTargets, runMain } from "./cli.ts";
 import { llm, claudeVersion, toSession, type Llm, type Pick, type Session } from "../llm/models.ts";
 import { judgeCuj } from "../llm/judge.ts";
 import {
@@ -369,15 +368,16 @@ async function runOnce(subject: string, settings: Settings, cujs: (readonly [str
 }
 
 /**
- * The program: parse args, load settings and CUJs, then one run, or one per CUJ when a folder was given (runGroups).
+ * The program: parse args, load config and CUJs, then one run (one per CUJ for a folder: runGroups), all `runs` times.
  * Holds /tmp/michelin/run.lock for all of it, waiting for any other live run first (runlock.ts).
  * Ends with a PASS/FAIL line per CUJ and the total; exits 1 if any setup failed.
  */
 async function main() {
   const args = parseCli(process.argv.slice(2));
   if (!args) return console.log(USAGE);
-  const [subject, ...picked] = [args.subject, ...args.picked].map((p) => resolveArg(p)); // or under MICHELIN_SUBJECTS
-  const settings = loadSettings(args.settingsPath ? resolveArg(args.settingsPath) : undefined, args.judging);
+  const settingsPath = args.settingsPath && resolveArg(args.settingsPath);
+  const { settings, runs: times, ...file } = loadConfig({ ...args, settingsPath, cwd: process.cwd() });
+  const [subject, ...picked] = pickTargets(args, file).map((p) => resolveArg(p)); // or under MICHELIN_SUBJECTS
   const files = expandCujs(picked);
   checkUniqueIds(files);
   const loaded = files.map((p) => [p, loadCuj(p)] as const);
@@ -386,7 +386,7 @@ async function main() {
   const runs: Run[] = [];
   const release = await acquireRunLock(); // one run at a time: setup picks ports by scanning, which races (runlock.ts)
   try {
-    for (const group of groups) runs.push(await runOnce(subject, settings, group));
+    for (let i = 0; i < times; i++) for (const group of groups) runs.push(await runOnce(subject, settings, group));
   } finally {
     release();
   }

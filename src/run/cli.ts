@@ -5,30 +5,52 @@
 import { parseArgs } from "node:util";
 
 /** Printed by --help, and as the error when no subject or no CUJ is given. */
-export const USAGE = `usage: node src/run/runner.ts [--settings file] [--all-judges] [--baseline dir ...] <subject> <cuj> [cuj ...]
-  <subject>        folder with setup.md, howtorun.md and teardown.md, e.g. subjects/toy
-  <cuj> ...        one or more CUJ yaml files or folders (required), e.g. subjects/toy/cujs/toy/country.yaml or subjects/toy/cujs/toy/;
-                   a folder runs every *.yaml directly in it, sorted, each on a fresh start (its own setup/teardown)
-  --settings file  models per role (default: defaults/settings.json in the michelin package)
+export const USAGE = `usage: michelin [run] [options] [<subject> <cuj> [cuj ...]]
+       michelin init
+  init             write a starter michelin.json and copy the toy subject to ./subjects/toy (never overwrites)
+  run              run CUJs (the word is optional: michelin <subject> <cuj> works too)
+  <subject>        folder with setup.md, howtorun.md and teardown.md, e.g. subjects/toy; default michelin.json's subject
+  <cuj> ...        one or more CUJ yaml files or folders, e.g. subjects/toy/cujs/toy/country.yaml or subjects/toy/cujs/toy/;
+                   a folder runs every *.yaml directly in it, sorted, each on a fresh start (its own setup/teardown);
+                   default michelin.json's cujs (positionals given: both subject and CUJs come from the command line)
+  --model m[@e]    the executor's model, e.g. claude-sonnet-5-5 or claude-sonnet-5-5@high (effort kept unless given)
+  --judges a,b@e   the judge list, e.g. claude-opus-5-5,claude-sonnet-5-5@medium (effort high unless given)
+  --runs n         run every CUJ n times (whole number >= 1, default 1)
+  --settings file  read this file instead of ./michelin.json
   --all-judges     every judge in settings scores every CUJ (default: the first judge alone, the rest only when it
                    fails an expectation, gives no valid result, or differs from --baseline; then the majority wins)
   --baseline dir   an earlier run folder whose <cuj-id>/verdict.json is the baseline verdict (repeatable, first match wins)
   -h, --help       show this help
+Settings come from flags, then ./michelin.json (any subset of constructor, executor, destructor, judge, subject, cujs,
+runs), then the built-in defaults/settings.json; a --settings file replaces ./michelin.json.
 A subject, CUJ or settings path that does not exist as given is looked up under each folder in MICHELIN_SUBJECTS
 (colon-separated), e.g. MICHELIN_SUBJECTS=~/my-subjects michelin my-app my-app/cujs/smoke/`;
 
 /** The error when no CUJ is named; a UsageError, so main prints it under USAGE and exits 2, before any setup. */
-export const NO_CUJS = "no CUJs given; list CUJ yaml files after the subject";
+export const NO_CUJS = "no CUJs given; list CUJ yaml files after the subject, or set cujs in michelin.json";
 export class UsageError extends Error {}
+
+/**
+ * Parse --runs.
+ *
+ * @param s The flag's value, e.g. "3"; undefined if not given.
+ * @returns The number, e.g. 3; undefined if not given.
+ * @throws  A UsageError unless it is a whole number >= 1.
+ */
+function parseRuns(s: string | undefined): number | undefined {
+  if (s === undefined) return undefined;
+  if (!/^[1-9]\d*$/.test(s)) throw new UsageError(`--runs must be a whole number >= 1, got "${s}"`);
+  return Number(s);
+}
 
 /**
  * Parse the runner's command line.
  *
- * @param argv The arguments after `node src/run/runner.ts`, i.e. process.argv.slice(2).
- * @returns    null if --help / -h was given; otherwise subject (folder holding setup.md, howtorun.md, teardown.md),
- *             picked (CUJ files to run, at least one), settingsPath (undefined unless --settings is given),
- *             judging: all (true with --all-judges) and baselines (the --baseline folders in order, [] if none).
- * @throws     On an unknown flag; a UsageError (exit 2) when no subject or no CUJ (NO_CUJS) is given.
+ * @param argv The arguments after `michelin`, i.e. process.argv.slice(2), e.g. ["run", "subjects/toy", "a.yaml"].
+ * @returns    null if --help / -h was given; otherwise command "run", subject (undefined if none given), picked (CUJ
+ *             files, maybe []), settingsPath (undefined unless --settings is given), judging: all (true with
+ *             --all-judges) and baselines (the --baseline folders in order, [] if none), and flags {model, judges, runs}.
+ * @throws     On an unknown flag; a UsageError (exit 2) on a bad --runs.
  */
 export function parseCli(argv: string[]) {
   const { values, positionals } = parseArgs({
@@ -36,21 +58,39 @@ export function parseCli(argv: string[]) {
     allowPositionals: true,
     options: {
       settings: { type: "string" },
+      model: { type: "string" },
+      judges: { type: "string" },
+      runs: { type: "string" },
       "all-judges": { type: "boolean" },
       baseline: { type: "string", multiple: true },
       help: { type: "boolean", short: "h" },
     },
   });
   if (values.help) return null;
-  const [subject, ...picked] = positionals;
-  if (!subject) throw new UsageError("no subject given");
-  if (!picked.length) throw new UsageError(NO_CUJS);
+  const [subject, ...picked] = positionals[0] === "run" ? positionals.slice(1) : positionals;
   return {
-    subject,
+    command: "run" as const,
+    subject: subject as string | undefined,
     picked,
     settingsPath: values.settings,
     judging: { all: values["all-judges"] ?? false, baselines: values.baseline ?? [] },
+    flags: { model: values.model, judges: values.judges, runs: parseRuns(values.runs) },
   };
+}
+
+/**
+ * Pick the subject and CUJs to run: the command line's if it names a subject, else michelin.json's.
+ *
+ * @param cli  From parseCli, e.g. {subject: "subjects/toy", picked: ["a.yaml"]} or {subject: undefined, picked: []}.
+ * @param file From loadConfig, e.g. {subject: "subjects/toy", cujs: ["subjects/toy/cujs/toy/"]}.
+ * @returns    [subject, ...cujs], e.g. ["subjects/toy", "a.yaml"].
+ * @throws     A UsageError (exit 2) when there is no subject, or no CUJ (NO_CUJS).
+ */
+export function pickTargets(cli: { subject?: string; picked: string[] }, file: { subject?: string; cujs: string[] }) {
+  const [subject, picked] = cli.subject ? [cli.subject, cli.picked] : [file.subject, file.cujs];
+  if (!subject) throw new UsageError("no subject given; name one, or set subject in michelin.json");
+  if (!picked.length) throw new UsageError(NO_CUJS);
+  return [subject, ...picked];
 }
 
 /**

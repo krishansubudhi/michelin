@@ -298,19 +298,14 @@ test("no CUJs exits 2 with usage and the error on stderr, before setup and witho
     () => execFileSync("node", ["src/run/runner.ts", `${SUBJECTS}/toy-v1`], { stdio: "pipe", timeout: 20_000 }),
     (e: unknown) => {
       const { status, stderr } = e as { status: number; stderr: unknown };
-      return (
-        status === 2 && /usage: node src\/run\/runner\.ts/.test(String(stderr)) && String(stderr).includes(NO_CUJS)
-      );
+      return status === 2 && /usage: michelin/.test(String(stderr)) && String(stderr).includes(NO_CUJS);
     },
   );
   assert.deepEqual(runs(), before);
 });
 
 test("--help prints usage and exits 0; no subject exits 2", () => {
-  assert.match(
-    execFileSync("node", ["src/run/runner.ts", "--help"], { encoding: "utf8" }),
-    /usage: node src\/run\/runner\.ts/,
-  );
+  assert.match(execFileSync("node", ["src/run/runner.ts", "--help"], { encoding: "utf8" }), /usage: michelin/);
   assert.throws(
     () => execFileSync("node", ["src/run/runner.ts"], { stdio: "pipe" }),
     (e: unknown) => (e as { status: number }).status === 2 && /usage/.test(String((e as { stderr: unknown }).stderr)),
