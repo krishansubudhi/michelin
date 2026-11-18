@@ -16,3 +16,5 @@ Each instance folder holds the issue (`problem.md`), the hidden test patch, the 
 - `check.sh <instance> <work>` applies the test patch and runs `swecheck.py`, which prints e.g. `FAIL_TO_PASS 1/1 passed` and `PASS_TO_PASS 81/81 passed`. SWE-bench cuts a test id at its first space, so such an id matches by prefix.
 
 With the reference fix applied, all five score full marks on both lists on macOS (checked 2026-11-18); without it every FAIL_TO_PASS test fails. pytest-5227's PASS_TO_PASS list drops three ids that are SWE-bench log-parsing debris (`[100%]`, `[`), not tests. Each CUJ also saves OpenCode's diff as `opencode.patch` in its run folder, so the tests can be rerun on it outside the run.
+
+To judge with the tests hidden, `blind.py OUT MODEL CUJDIR...` builds a run folder for `michelin compare` from finished CUJs whose only evidence is the issue (in the task) and each saved `opencode.patch`: no `check.sh` output, no FAIL_TO_PASS / PASS_TO_PASS counts, no hidden test patch. After judging, `hidden.sh <instance> <patch> <work>` scores the same patch on a clean base checkout with the hidden tests.
