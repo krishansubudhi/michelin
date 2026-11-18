@@ -1,0 +1,6 @@
+hypothesis
+xmlschema
+requests
+mock
+pygments
+setuptools<81

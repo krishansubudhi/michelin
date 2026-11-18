@@ -22,16 +22,16 @@ import type { Judging } from "../src/llm/judge.ts";
 const SUBJECTS = ["subjects", "test/fixtures/subjects"];
 const tmp = (p: string) => mkdtempSync(join(tmpdir(), p));
 
-test("every subject has setup, howtorun and teardown; other files are md, yaml, sh or py", () => {
+test("every subject has setup, howtorun and teardown; other files are md, yaml, sh, py, or SWE-bench txt and patch data", () => {
   for (const d of SUBJECTS)
     for (const s of readdirSync(d)) {
       for (const f of ["setup.md", "howtorun.md", "teardown.md"])
         assert.ok(existsSync(`${d}/${s}/${f}`), `${d}/${s}/${f} missing`);
       const files = readdirSync(`${d}/${s}`, { recursive: true, withFileTypes: true }).filter((f) => f.isFile());
       assert.deepEqual(
-        files.map((f) => f.name).filter((f) => !/\.(md|yaml|sh|py)$/.test(f)),
+        files.map((f) => f.name).filter((f) => !/\.(md|yaml|sh|py|txt|patch)$/.test(f)),
         [],
-        `${d}/${s}: only .md, .yaml, .sh, .py`,
+        `${d}/${s}: only .md, .yaml, .sh, .py, .txt, .patch`,
       );
     }
 });

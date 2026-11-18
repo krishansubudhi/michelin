@@ -1,0 +1,4 @@
+REPO=pytest-dev/pytest
+BASE=6995257cf470d2143ad1683824962de4071c0eb7
+VER=8.0
+PY=python3.11

@@ -1,0 +1,4 @@
+REPO=pallets/flask
+BASE=4c288bc97ea371817199908d0d9b12de9dae327e
+VER=2.3
+PY=python3.11

@@ -1,0 +1,18 @@
+instruction: |
+  A SWE-bench Lite task (pytest-dev__pytest-11143). MICHELIN_SWE is the folder of SWE-bench files (subjects/opencode/swe in michelin).
+  First run `bash "$MICHELIN_SWE/prep.sh" pytest-dev__pytest-11143 WORK` (shell timeout 10 minutes) and record its output: it clones
+  pytest-dev/pytest at 6995257cf470 into WORK/repo with a Python venv at WORK/venv.
+  Then ask OpenCode, run from WORK/repo (cd WORK/repo instead of cd WORK), with the message "Fix this issue in the
+  repo. A Python env with the repo installed is at ../venv (source ../venv/bin/activate). Issue:" followed by the
+  contents of `$MICHELIN_SWE/pytest-dev__pytest-11143/problem.md`, passed as part of the one message argument, e.g. "...Issue: $(cat ...)".
+  Do not change any file yourself. After OpenCode exits, record `git -C WORK/repo diff --stat`, then run
+  `bash "$MICHELIN_SWE/check.sh" pytest-dev__pytest-11143 WORK` and record its full output: it adds the benchmark's hidden tests and
+  counts how many FAIL_TO_PASS and PASS_TO_PASS tests pass.
+timeout_s: 1800
+expectations:
+  - |
+    OpenCode changed the repo's source: git diff --stat lists at least one changed file.
+  - |
+    check.sh reports every FAIL_TO_PASS test passed (e.g. "FAIL_TO_PASS 1/1 passed"): the issue is fixed.
+  - |
+    check.sh reports every PASS_TO_PASS test passed (e.g. "PASS_TO_PASS 18/18 passed"): nothing that worked broke.

@@ -1,0 +1,2 @@
+# SWE-bench data stays byte-exact (patches must apply), trailing spaces and all
+subjects/opencode/swe/*/** -whitespace

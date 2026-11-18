@@ -1,4 +1,5 @@
-# no dot-files in git except this one
+# no dot-files in git except these
 .*
 !.gitignore
+!.gitattributes
 node_modules/
