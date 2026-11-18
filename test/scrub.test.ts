@@ -1,0 +1,56 @@
+// Tests for scrub.ts: which identifiers a run has, their short forms, and replacing them with tags.
+// Run: npm test (no LLM).
+
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { resolve } from "node:path";
+import { identifiers, variants, scrub } from "../src/llm/scrub.ts";
+
+test("identifiers: run id, folder, subject, every model, setup NAME=value values and extras; short ones dropped", () => {
+  const run = {
+    subject: "subjects/opencode",
+    settings: {
+      constructor: { model: "claude-sonnet-5-5", effort: "low" },
+      executor: { model: "ollama/gemma4:26b-mlx", effort: "high" },
+      destructor: { model: "claude-sonnet-5-5", effort: "low" },
+      judge: [{ model: "claude-opus-5-5", effort: "high" }],
+    },
+  };
+  const ids = identifiers(".runs/r1-2026", run, "set up ok\nMODEL=ollama/qwen3.8:27b\n  PORT = no\nX=ab", [
+    "laptop",
+    "zz",
+  ]);
+  assert.deepEqual(ids, [
+    "r1-2026",
+    resolve(".runs/r1-2026"),
+    "subjects/opencode",
+    "opencode",
+    "claude-sonnet-5-5",
+    "ollama/gemma4:26b-mlx",
+    "claude-opus-5-5",
+    "ollama/qwen3.8:27b",
+    "laptop",
+  ]);
+  assert.deepEqual(identifiers("/tmp/abc", {}), ["abc", "/tmp/abc"]);
+});
+
+test("variants: short forms of a model id; a path only whole", () => {
+  assert.deepEqual(variants("ollama/gemma4:26b-mlx"), ["ollama/gemma4:26b-mlx", "gemma4:26b-mlx", "gemma4", "gemma"]);
+  assert.deepEqual(variants("subjects/opencode"), ["subjects/opencode", "opencode"]);
+  assert.deepEqual(variants("/x/y/work"), ["/x/y/work"]);
+  assert.deepEqual(variants("./work"), ["./work"]);
+  assert.deepEqual(variants("qwen3.8:27b"), ["qwen3.8:27b", "qwen3.8", "qwen"]);
+});
+
+test("scrub: case-insensitive, longest first, the earlier group wins a shared form", () => {
+  const a: [string[], string] = [["ollama/gemma4:26b-mlx", "subjects/opencode"], "Program A"];
+  const b: [string[], string] = [["ollama/qwen3.8:27b", "subjects/opencode"], "Program B"];
+  assert.equal(
+    scrub("OLLAMA/Gemma4:26B-mlx then gemma4 and Gemma, OpenCode vs qwen3.8:27b / QWEN", [a, b]),
+    "Program A then Program A and Program A, Program A vs Program B / Program B",
+  );
+  assert.equal(scrub("opencode", [b, a]), "Program B");
+  assert.equal(scrub("the work is done", [[["/x/y/work"], "T"]]), "the work is done");
+  assert.equal(scrub("a+b (c)", [[["a+b (c)"], "T"]]), "T", "regex characters are literal");
+  assert.equal(scrub("unchanged", []), "unchanged");
+});

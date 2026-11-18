@@ -90,7 +90,7 @@ export function tally(expectations: string[], byJudge: Record<string, Vote[] | n
 }
 
 /** The executor's evidence for the judges, or why it couldn't be read. */
-type Evidence = { journey: string; reply: string; error?: undefined } | { error: string };
+export type Evidence = { journey: string; reply: string; error?: undefined } | { error: string };
 
 /**
  * Read the executor's evidence from executor.json. Missing or failed means empty evidence.
@@ -99,7 +99,7 @@ type Evidence = { journey: string; reply: string; error?: undefined } | { error:
  * @returns   journey: steps as JSON lines; reply: the executor's reply, or why it failed;
  *            or {error} if executor.json isn't valid JSON, e.g. "executor.json is not valid JSON: ...".
  */
-function evidence(out: string): Evidence {
+export function readEvidence(out: string): Evidence {
   const f = join(out, "executor.json");
   if (!existsSync(f)) return { journey: "", reply: "" };
   let e;
@@ -204,7 +204,7 @@ export async function judgeCuj(
   out: string,
   { expectations, given }: { expectations: string[]; given?: object },
 ): Promise<{ score: string; sessions: Record<string, Session>; error?: string }> {
-  const ev = evidence(out);
+  const ev = readEvidence(out);
   if (ev.error !== undefined) return { score: "unjudged", sessions: {}, error: ev.error };
   const ask = { prompt: judgePrompt(expectations, ev.journey, ev.reply, given), n: expectations.length };
   const first = await callJudges(llm, all ? judges : judges.slice(0, 1), out, ask);

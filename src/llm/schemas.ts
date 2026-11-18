@@ -45,6 +45,10 @@ export type Vote = { pass: boolean; why: string };
 export type JudgeResult = { verdicts: Vote[] };
 export const JUDGE: Schema = obj({ verdicts: list(obj({ pass: bool, why: str })) });
 
+/** One pairwise judge's call: which program did the task better ("A", "B" or "tie"), and why. */
+export type Pair = { winner: string; why: string };
+export const PAIR: Schema = obj({ winner: str, why: str });
+
 /** The array and object members of Schema. */
 type ArraySchema = Extract<Schema, { type: "array" }>;
 type ObjectSchema = Extract<Schema, { type: "object" }>;
