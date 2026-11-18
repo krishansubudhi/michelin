@@ -129,26 +129,40 @@ test("styling: Tailwind CSS is inlined; the page loads no external stylesheet or
   assert.match(html, /<main class="page">/);
 });
 
-test("judge grid: short judge labels with the full name in a title, real row and column headers", () => {
+test("verdicts: each judge's pass/fail and reason sit under its numbered expectation", () => {
   const view = liveView();
-  const vote = (pass: boolean) => ({ pass, why: "because" });
+  const vote = (pass: boolean, why: string) => ({ pass, why });
   Object.assign(view.cujs[1], {
     outcomes: [
       {
         expectation: "says hi",
         pass: true,
-        votes: { "claude-opus-5-5-high": vote(true), "claude-sonnet-5-5-medium": vote(true) },
+        votes: { "claude-opus-5-5-high": vote(true, "greets"), "claude-sonnet-5-5-medium": vote(true, "waves") },
+      },
+      {
+        expectation: "is brief",
+        pass: false,
+        votes: { "claude-opus-5-5-high": vote(false, "rambles"), "claude-sonnet-5-5-medium": null },
       },
     ],
   });
   const html = renderReport(view, now);
   assert.ok(html.includes('<abbr class="jn" title="claude-opus-5-5-high">opus·high</abbr>'));
   assert.ok(html.includes('<abbr class="jn" title="claude-sonnet-5-5-medium">sonnet·med</abbr>'));
-  assert.match(html, /<th scope="col">expectation<\/th>/);
-  assert.match(html, /<th scope="row">says hi<\/th>/);
-  assert.match(html, /<span class="sr-only">pass<\/span>/, "votes are not colour or glyph alone");
-  assert.match(html, /class="tiles allpass"/, "every expectation passed: the celebratory variant");
-  assert.match(html, /All 1 passed/);
+  const at = (s: string) => html.indexOf(s);
+  const one = at('<span class="n">1.</span> <span class="et">says hi</span> <span class="pill ok">pass</span>');
+  const two = at('<span class="n">2.</span> <span class="et">is brief</span> <span class="pill bad">fail</span>');
+  assert.ok(one > 0 && two > one, "expectations numbered in CUJ order, each with its majority pass/fail");
+  for (const why of ["greets", "waves"]) assert.ok(at(why) > one && at(why) < two, `${why} sits under expectation 1`);
+  assert.ok(at("rambles") > two, "rambles sits under expectation 2");
+  assert.match(
+    html,
+    /sonnet·med<\/abbr> <span class="pill na">none<\/span><\/span><\/li>/,
+    "a missing vote reads none",
+  );
+  assert.ok(!html.includes("Judge reasons"), "no second, detached list of reasons");
+  assert.match(html, /class="tiles"/);
+  assert.match(html, /1 of 2 passed|1\/2/);
 });
 
 test("shortJudge: family and effort, unknown names unchanged", () => {
