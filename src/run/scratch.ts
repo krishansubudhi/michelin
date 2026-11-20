@@ -14,8 +14,8 @@ import { basename, join } from "node:path";
  *
  * @param env  The environment, e.g. process.env; MICHELIN_TMP wins when set and non-empty.
  * @param tmp  The OS temp folder, e.g. "/tmp".
- * @param user The OS user name, e.g. "jarvis".
- * @returns    e.g. "/tmp/michelin-jarvis", or $MICHELIN_TMP.
+ * @param user The OS user name, e.g. "agent".
+ * @returns    e.g. "/tmp/michelin-agent", or $MICHELIN_TMP.
  */
 export const tmpRoot = (env: NodeJS.ProcessEnv, tmp: string, user: string) =>
   env.MICHELIN_TMP || join(tmp, `michelin-${user}`);
@@ -30,14 +30,14 @@ export const SCRATCH_ROOT = join(TMP_ROOT, "runs");
  * The scratch folder for one run. Pure.
  *
  * @param runDir The run's output folder, e.g. ".runs/2026-11-10T02-58-00-000Z".
- * @returns      e.g. "/tmp/michelin-jarvis/runs/2026-11-10T02-58-00-000Z".
+ * @returns      e.g. "/tmp/michelin-agent/runs/2026-11-10T02-58-00-000Z".
  */
 export const scratchFor = (runDir: string) => join(SCRATCH_ROOT, basename(runDir));
 
 /**
  * The line setup and teardown read, naming the scratch folder. Pure.
  *
- * @param dir The scratch folder, e.g. "/tmp/michelin-jarvis/runs/x".
+ * @param dir The scratch folder, e.g. "/tmp/michelin-agent/runs/x".
  * @returns   The prompt line.
  */
 export const scratchNote = (dir: string) =>
@@ -46,13 +46,13 @@ export const scratchNote = (dir: string) =>
 /**
  * Make the scratch folder.
  *
- * @param dir The folder, e.g. "/tmp/michelin-jarvis/runs/x".
+ * @param dir The folder, e.g. "/tmp/michelin-agent/runs/x".
  */
 export const makeScratch = (dir: string) => mkdirSync(dir, { recursive: true });
 
 /**
  * Delete the scratch folder, if it is still there.
  *
- * @param dir The folder, e.g. "/tmp/michelin-jarvis/runs/x".
+ * @param dir The folder, e.g. "/tmp/michelin-agent/runs/x".
  */
 export const dropScratch = (dir: string) => rmSync(dir, { recursive: true, force: true });

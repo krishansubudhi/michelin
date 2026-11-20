@@ -1,3 +1,4 @@
 test/fixtures
 src/report/tailwind.gen.ts
 subjects/opencode/swe/*/
+.ratchet.json

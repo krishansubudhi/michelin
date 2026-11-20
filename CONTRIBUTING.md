@@ -18,4 +18,6 @@ Optional: `npm link` puts `michelin` on your PATH (set `npm config set prefix ~/
 
 ## Sending a change
 
-The pre-commit hook runs lint, unit tests, then a `claude -p` review of the diff (`SKIP_REVIEW=1` skips the review; `RUN_INTEGRATION=1` adds integration tests). Don't bypass it with `--no-verify`. Code rules: `CLAUDE.md`.
+The pre-commit hook runs lint, unit tests, then a `claude -p` review of the diff (`SKIP_REVIEW=1` skips the review; `RUN_INTEGRATION=1` adds integration tests). Don't bypass it with `--no-verify`.
+
+Code size has a budget that only goes down: [`ratchet-size`](https://pypi.org/project/ratchet-size/) (`pip install ratchet-size`) reads `.ratchet.json` and `ratchet check` refuses a change that grows `src/`, `bin/`, `scripts/`, `hooks/` or `test/` past their ceilings, or any file past 500 lines. The pre-commit hook runs it when `ratchet` is on your PATH. When the code shrinks, run `ratchet tighten` and commit the lower ceilings; asking for more room is a human's call (`ratchet grant`). Code rules: `CLAUDE.md`.

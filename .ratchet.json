@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "max_file_lines": 500,
+  "slack": 150,
+  "groups": {
+    "source": {
+      "include": [
+        "src/**",
+        "bin/**",
+        "scripts/**",
+        "hooks/**"
+      ],
+      "exclude": [],
+      "extensions": [
+        ".js",
+        ".ts",
+        ".sh",
+        ""
+      ]
+    },
+    "tests": {
+      "include": [
+        "test/**"
+      ],
+      "exclude": [
+        "test/fixtures/**"
+      ],
+      "extensions": [
+        ".js",
+        ".ts"
+      ]
+    }
+  },
+  "ceilings": {
+    "source": 4086,
+    "tests": 2567
+  },
+  "file_ceilings": {}
+}
