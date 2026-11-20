@@ -6,6 +6,8 @@ Requires Claude Code (`claude` CLI, logged in).
 
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![node >=22.18](https://img.shields.io/badge/node-%3E%3D22.18-brightgreen)](https://nodejs.org)
 
+![michelin run on the toy subject: a passing journey, the must-fail control failing as it should, then the run report](docs/michelin-run.gif)
+
 **Evaluate one agent**
 
 ![A Michelin run report: OpenCode on Qwen 3.8 27B, one SWE-bench Lite task, pass rate, cost and each step](docs/run-report.png)
