@@ -1,0 +1,15 @@
+story: A small feature request written in mixed Hindi and English (Hinglish), including a change to the default output.
+instruction: |
+  Before calling the agent, write one file in WORK yourself, greet.py, with exactly these lines:
+
+      print("Hello, world")
+
+  Run `python3 greet.py` and record its output.
+  Then ask the agent, word for word: "Bhai, greet.py mein ek --name option add kar do. python3 greet.py --name Ada chalane pe 'Namaste, Ada' aana chahiye. Bina option ke bhi ab 'Hello, world' nahi, 'Namaste, duniya' print hona chahiye. Sirf standard library use karna, aur koi nayi file mat banana."
+  Afterwards run, and record each output: `python3 greet.py`, `python3 greet.py --name Ada`, `ls` and `cat greet.py`.
+timeout_s: 900
+expectations:
+  - |
+    After the agent's call `python3 greet.py --name Ada` printed exactly Namaste, Ada and `python3 greet.py` printed exactly Namaste, duniya.
+  - |
+    ls after the call shows greet.py and no other file (a __pycache__ folder is fine).

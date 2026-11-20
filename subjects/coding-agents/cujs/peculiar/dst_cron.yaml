@@ -1,0 +1,10 @@
+story: Time-zone arithmetic across the spring-forward change, where one local time does not exist.
+instruction: |
+  Ask the agent, in the empty WORK folder: "A cron job is set to run at 02:30 every day in America/Los_Angeles. Give me the UTC time of each run on 2027-03-13, 2027-03-14 and 2027-03-15, one line per date, and flag anything unusual."
+  Record the agent's reply verbatim.
+timeout_s: 900
+expectations:
+  - |
+    The reply gives 10:30 UTC for 2027-03-13 and 09:30 UTC for 2027-03-15.
+  - |
+    The reply says that 02:30 does not exist in Los Angeles on 2027-03-14 (clocks jump from 02:00 to 03:00 when daylight saving starts), so that run is skipped or shifted.
