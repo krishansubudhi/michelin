@@ -1,0 +1,20 @@
+story: A config file that no longer parses; the agent must repair it without changing the data.
+instruction: |
+  Before calling the agent, write one file in WORK yourself, config.json, with exactly these lines:
+
+      {
+        "name": "billing",
+        "port": 8080,
+        "debug": false,
+        "hosts": ["a.example", "b.example",],
+      }
+
+  Run `python3 -m json.tool config.json` in WORK and record its output (it fails).
+  Then ask the agent: "config.json does not parse as JSON. Fix it without changing any key or value."
+  Afterwards run `python3 -m json.tool config.json` and record its output.
+timeout_s: 900
+expectations:
+  - |
+    Before the agent's call json.tool failed on config.json.
+  - |
+    After the agent's call json.tool printed the file, and it holds exactly name "billing", port 8080, debug false and hosts ["a.example", "b.example"], with no key added or removed.

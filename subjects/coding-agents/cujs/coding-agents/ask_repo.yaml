@@ -1,0 +1,24 @@
+story: A question about a two-file repo, answered without editing anything.
+instruction: |
+  Before calling the agent, write two files in WORK yourself, with exactly these lines.
+
+  shop.py:
+
+      from prices import PRICES
+
+      def total(items):
+          return sum(PRICES[i] for i in items)
+
+  prices.py:
+
+      PRICES = {"apple": 3, "pear": 5}
+
+  Record `shasum shop.py prices.py`. Then ask the agent:
+  "In this repo, what does total(["apple", "pear", "pear"]) return, and which file holds the prices? Answer briefly and do not change any file."
+  Record the agent's reply, then `ls` and `shasum shop.py prices.py` again.
+timeout_s: 900
+expectations:
+  - |
+    The agent's reply says total(["apple", "pear", "pear"]) returns 13 and that the prices are in prices.py.
+  - |
+    Neither file was changed and no file was added: the shasum lines before and after are identical and ls shows only shop.py and prices.py.

@@ -1,0 +1,15 @@
+story: A small feature on a tiny script, keeping the old behaviour.
+instruction: |
+  Before calling the agent, write one file in WORK yourself, greet.py, with exactly these lines:
+
+      print("Hello, world")
+
+  Run `python3 greet.py` and record its output.
+  Then ask the agent: "Add a --name option to greet.py: python3 greet.py --name Ada should print Hello, Ada. With no option it must still print Hello, world. Use only the standard library."
+  Afterwards run, and record each output: `python3 greet.py`, `python3 greet.py --name Ada`, and `cat greet.py`.
+timeout_s: 900
+expectations:
+  - |
+    After the agent's call, `python3 greet.py --name Ada` printed exactly Hello, Ada.
+  - |
+    After the agent's call, `python3 greet.py` with no option still printed exactly Hello, world.
