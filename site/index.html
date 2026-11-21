@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Michelin results: agents and models on real CUJs</title>
+    <meta
+      name="description"
+      content="Evaluate models and harnesses on real CUJs, not public benchmarks. Open results from Michelin, an eval harness for AI agents."
+    />
+    <style>
+      :root {
+        --bg: #fbfaf7;
+        --fg: #1d1d1b;
+        --mute: #6b6a66;
+        --line: #e4e1da;
+        --card: #fff;
+        --accent: #b3261e;
+        --ok: #1f7a3a;
+        --bad: #b3261e;
+        color-scheme: light dark;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #161614;
+          --fg: #ecebe6;
+          --mute: #a09e97;
+          --line: #34332f;
+          --card: #1f1f1c;
+          --accent: #ff8a80;
+          --ok: #7bd88f;
+          --bad: #ff8a80;
+        }
+      }
+      * {
+        box-sizing: border-box;
+        scrollbar-width: thin;
+        scrollbar-color: var(--line) transparent;
+      }
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--line);
+        border-radius: 3px;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          16px/1.55 system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+      }
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 24px 16px 64px;
+      }
+      h1 {
+        font-size: 2rem;
+        line-height: 1.15;
+        margin: 8px 0 12px;
+      }
+      h2 {
+        margin-top: 48px;
+        font-size: 1.35rem;
+      }
+      h3 {
+        margin: 28px 0 4px;
+        font-size: 1.1rem;
+      }
+      a {
+        color: var(--accent);
+      }
+      .kicker {
+        color: var(--mute);
+        font-size: 0.9rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .lede {
+        font-size: 1.1rem;
+        max-width: 640px;
+      }
+      .cta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        margin: 18px 0;
+      }
+      .btn {
+        display: inline-block;
+        padding: 10px 18px;
+        border-radius: 8px;
+        background: var(--accent);
+        color: #fff;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      @media (prefers-color-scheme: dark) {
+        .btn {
+          color: #161614;
+        }
+      }
+      code,
+      pre {
+        font:
+          13px/1.5 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+      }
+      pre {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 12px;
+        overflow-x: auto;
+        white-space: pre;
+      }
+      .scroll {
+        overflow-x: auto;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 8px 6px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+      th {
+        font-size: 0.8rem;
+        color: var(--mute);
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      th[data-sort] {
+        cursor: pointer;
+      }
+      th[data-sort]::after {
+        content: " ↕";
+      }
+      .board > tbody > tr:first-child td {
+        font-size: 0.95rem;
+      }
+      button.open {
+        all: unset;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      button.open::before {
+        content: "▸ ";
+        color: var(--mute);
+      }
+      button.open[aria-expanded="true"]::before {
+        content: "▾ ";
+      }
+      .v,
+      .pct,
+      .note,
+      .date {
+        color: var(--mute);
+        font-size: 0.8rem;
+      }
+      .detail > td {
+        background: var(--card);
+        padding: 4px 10px 12px;
+      }
+      .tasks td,
+      .tasks th {
+        font-size: 0.85rem;
+        padding: 5px 4px;
+      }
+      .detail pre,
+      .detail p,
+      .tasks td {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      .m {
+        display: none;
+        color: var(--mute);
+        font-size: 0.8rem;
+      }
+      .ok {
+        color: var(--ok);
+      }
+      .bad {
+        color: var(--bad);
+        font-weight: 600;
+      }
+      .limits li {
+        margin: 6px 0;
+      }
+      footer {
+        margin-top: 56px;
+        color: var(--mute);
+        font-size: 0.85rem;
+      }
+      @media (max-width: 600px) {
+        h1 {
+          font-size: 1.6rem;
+        }
+        .date,
+        .model,
+        .v {
+          display: none;
+        }
+        .m {
+          display: block;
+        }
+        th,
+        td {
+          padding: 7px 4px;
+        }
+        .board > tbody > tr:first-child td {
+          font-size: 0.85rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="kicker">Michelin results</div>
+        <h1>Evaluate models and harnesses on real CUJs, not public benchmarks.</h1>
+        <p class="lede">
+          Michelin is an open source eval harness for AI agents. You describe a critical user journey (CUJ) in plain
+          words. An LLM drives your real agent through it, and blind judges score what it left behind. These are the
+          runs we have, every number taken from a run folder. Add yours by pull request.
+        </p>
+        <div class="cta">
+          <a class="btn" href="https://github.com/krishansubudhi/michelin">Download Michelin</a>
+          <code>npm install -g michelin-eval</code>
+        </div>
+      </header>
+
+      <h2 id="leaderboard">Leaderboard</h2>
+      <p>
+        Tap a row for per-CUJ results, agent time, cost, the exact command and the evidence. Tap a column header to
+        sort. Rows in different tables ran different tasks, so compare within a table only.
+      </p>
+      <!--LEADERBOARD-->
+
+      <h2 id="read">How to read this</h2>
+      <ul class="limits">
+        <li>
+          <b>Passed</b> counts judged runs that met every expectation of their CUJ. A must-fail control is left out of
+          the count; it failed for every row, which shows the judges read the evidence.
+        </li>
+        <li>
+          <b>Median time</b> is the agent's own call, not Michelin's setup or judging. <b>Agent cost</b> is what the
+          agent CLI reported; n/a means it reported tokens only.
+        </li>
+        <li>
+          Small sets: one run per CUJ unless a table says otherwise. A single pass or fail can flip on a rerun. Treat
+          these as behaviour probes, not a ranking.
+        </li>
+        <li>
+          The judges are Claude models and some agents run Claude models too. Judges never see which agent or model ran,
+          and every verdict quotes a recorded check, but a shared bias can't be ruled out.
+        </li>
+      </ul>
+
+      <h2 id="reproduce">Reproduce a row</h2>
+      <p>Clone the repo, install Michelin, log in to the agent CLI, then run the row's command from the repo root:</p>
+      <pre><code>git clone https://github.com/krishansubudhi/michelin && cd michelin
+npm install -g michelin-eval      # or: npm install, then node bin/michelin.js
+# each row's details list the suite's setup line and its own command, e.g.
+C=subjects/coding-agents/cujs
+run() { for d in peculiar coding-agents; do michelin run subjects/coding-agents $C/$d/; done; }
+AGENT=claude AGENT_MODEL=claude-sonnet-5-5 AGENT_EFFORT=medium run</code></pre>
+      <p>
+        Each run prints a <code>run dir:</code>. Its <code>report.html</code> has every step, the agent's reply and each
+        judge's reasons. Full notes:
+        <a href="https://github.com/krishansubudhi/michelin/blob/main/docs/scoreboard.md">docs/scoreboard.md</a>.
+      </p>
+
+      <h2 id="submit">Submit your results</h2>
+      <ol>
+        <li>Run a full suite: every CUJ listed for it in <code>results/suites.json</code>, unedited.</li>
+        <li>Add one file, <code>results/&lt;date&gt;-&lt;agent&gt;-&lt;model&gt;.json</code>, in the format below.</li>
+        <li>
+          Open a pull request with the run folders' <code>verdict.json</code> files or <code>report.html</code>
+          summaries as evidence. A check validates the file; once merged, this page rebuilds with your row.
+        </li>
+      </ol>
+      <pre><code>{
+  "format": "michelin-results/1",
+  "suite": "coding-agents",
+  "agent": "Claude Code",
+  "agent_version": "2.1.322",
+  "model": "Claude Sonnet 5.5 (medium)",
+  "date": "2026-11-20",
+  "submitted_by": "your-github-handle",
+  "reproduce": "AGENT=claude AGENT_MODEL=claude-sonnet-5-5 AGENT_EFFORT=medium run",
+  "evidence": ["https://link/to/your/report.html or a path in the repo"],
+  "notes": "optional: anything a reader should know",
+  "tasks": [
+    { "cuj": "peculiar/broken_runner", "runs": 1, "passed": 1, "agent_s": [8.6], "cost_usd": 0.0427 },
+    "... one entry per CUJ in the suite"
+  ]
+}</code></pre>
+      <p>
+        Field by field, with the rules the check enforces:
+        <a href="https://github.com/krishansubudhi/michelin/blob/main/results/README.md">results/README.md</a>. Think a
+        CUJ or a judge got something wrong? Open an issue quoting the report.
+      </p>
+
+      <footer>
+        Static page, no tracking, built from
+        <a href="https://github.com/krishansubudhi/michelin/tree/main/results">results/</a> on every merge. MIT
+        licensed.
+      </footer>
+    </main>
+    <script>
+      for (const b of document.querySelectorAll("button.open"))
+        b.onclick = () => {
+          const d = b.closest("tbody").querySelector(".detail");
+          d.hidden = !d.hidden;
+          b.setAttribute("aria-expanded", String(!d.hidden));
+        };
+      for (const th of document.querySelectorAll("th[data-sort]"))
+        th.onclick = () => {
+          const table = th.closest("table");
+          const key = th.dataset.sort;
+          const dir = (table.dataset.dir = table.dataset.key === key && table.dataset.dir === "1" ? "-1" : "1");
+          table.dataset.key = key;
+          const val = (t) => (t.dataset[key] === "" ? Infinity : Number(t.dataset[key]));
+          const sign = key === "rate" ? -Number(dir) : Number(dir);
+          [...table.tBodies].sort((a, b) => sign * (val(a) - val(b))).forEach((t) => table.append(t));
+        };
+      const open = location.hash && document.querySelector(location.hash + " button.open");
+      if (open) open.click();
+    </script>
+  </body>
+</html>

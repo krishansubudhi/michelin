@@ -18,6 +18,8 @@ Requires Claude Code (`claude` CLI, logged in).
 
 OpenCode on Qwen 3.8 27B vs Gemma 4 26B, five SWE-bench Lite tasks, judged blind to the tests: [results](subjects/opencode/RESULTS.md), [reproduce it](subjects/opencode/README.md).
 
+**[Results page](https://krishansubudhi.github.io/michelin/):** every published run as a sortable leaderboard, built from [`results/`](results); add your own by pull request.
+
 **[Scoreboard](docs/scoreboard.md):** Claude Code, Antigravity and OpenCode on the same 11 CUJs, with the commands to rerun any row or add your own.
 
 ## Why it is different
