@@ -4,3 +4,5 @@
 !.gitattributes
 !.ratchet.json
 node_modules/
+!.github
+_site/

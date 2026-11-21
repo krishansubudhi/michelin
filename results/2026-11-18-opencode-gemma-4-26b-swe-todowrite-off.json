@@ -1,0 +1,49 @@
+{
+  "format": "michelin-results/1",
+  "suite": "opencode-swe-lite-5",
+  "agent": "OpenCode",
+  "agent_version": "1.19.5",
+  "model": "Gemma 4 26B, local via Ollama (todowrite off)",
+  "date": "2026-11-18",
+  "submitted_by": "krishansubudhi",
+  "reproduce": "OPENCODE_MODEL=ollama/gemma4:26b-mlx OPENCODE_TOOLS_OFF=todowrite michelin run subjects/opencode subjects/opencode/cujs/swe/",
+  "evidence": ["subjects/opencode/RESULTS.md"],
+  "notes": "Rerun with OpenCode's todowrite tool off and a 600 s limit, driven by a plain script (setup.md, prep.sh, opencode run), not michelin run.",
+  "tasks": [
+    {
+      "cuj": "swe/pytest-11143",
+      "runs": 1,
+      "passed": 1,
+      "agent_s": [],
+      "cost_usd": 0
+    },
+    {
+      "cuj": "swe/pytest-5227",
+      "runs": 1,
+      "passed": 1,
+      "agent_s": [],
+      "cost_usd": 0
+    },
+    {
+      "cuj": "swe/pytest-6116",
+      "runs": 1,
+      "passed": 0,
+      "agent_s": [],
+      "cost_usd": 0
+    },
+    {
+      "cuj": "swe/pytest-7168",
+      "runs": 1,
+      "passed": 0,
+      "agent_s": [],
+      "cost_usd": 0
+    },
+    {
+      "cuj": "swe/pytest-7432",
+      "runs": 1,
+      "passed": 0,
+      "agent_s": [],
+      "cost_usd": 0
+    }
+  ]
+}

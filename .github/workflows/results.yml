@@ -1,0 +1,37 @@
+# Checks every results/*.json on pull requests; on main, builds the results page and deploys it to GitHub Pages.
+name: Results
+on:
+  pull_request:
+    paths: ["results/**", "site/**", "scripts/results.ts", ".github/workflows/results.yml"]
+  push:
+    branches: [main]
+    paths: ["results/**", "site/**", "scripts/results.ts", ".github/workflows/results.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node scripts/results.ts --out _site
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
