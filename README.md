@@ -18,6 +18,8 @@ Requires Claude Code (`claude` CLI, logged in).
 
 OpenCode on Qwen 3.8 27B vs Gemma 4 26B, five SWE-bench Lite tasks, judged blind to the tests: [results](subjects/opencode/RESULTS.md), [reproduce it](subjects/opencode/README.md).
 
+**[Scoreboard](docs/scoreboard.md):** Claude Code, Antigravity and OpenCode on the same 11 CUJs, with the commands to rerun any row or add your own.
+
 ## Why it is different
 
 - **Whole systems, real journeys.** A CUJ (critical user journey) is a few lines of yaml: what a user does and what should be true afterwards. Your agent runs as it really runs (CLI, server, chat app); an LLM sets it up, drives it, and tears it down. No harness code inside your agent.
