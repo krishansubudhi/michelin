@@ -1,0 +1,49 @@
+{
+  "format": "michelin-results/1",
+  "suite": "opencode-swe-lite-5",
+  "agent": "OpenCode",
+  "agent_version": "1.19.5",
+  "model": "Qwen 3.8 27B, local via Ollama",
+  "date": "2026-11-18",
+  "submitted_by": "krishansubudhi",
+  "reproduce": "OPENCODE_MODEL=ollama/qwen3.8:27b michelin run subjects/opencode subjects/opencode/cujs/swe/",
+  "evidence": ["subjects/opencode/RESULTS.md"],
+  "notes": "One run, todowrite on, 1800 s limit.",
+  "tasks": [
+    {
+      "cuj": "swe/pytest-11143",
+      "runs": 1,
+      "passed": 1,
+      "agent_s": [],
+      "cost_usd": 0
+    },
+    {
+      "cuj": "swe/pytest-5227",
+      "runs": 1,
+      "passed": 1,
+      "agent_s": [],
+      "cost_usd": 0
+    },
+    {
+      "cuj": "swe/pytest-6116",
+      "runs": 1,
+      "passed": 0,
+      "agent_s": [],
+      "cost_usd": 0
+    },
+    {
+      "cuj": "swe/pytest-7168",
+      "runs": 1,
+      "passed": 1,
+      "agent_s": [],
+      "cost_usd": 0
+    },
+    {
+      "cuj": "swe/pytest-7432",
+      "runs": 1,
+      "passed": 1,
+      "agent_s": [],
+      "cost_usd": 0
+    }
+  ]
+}
