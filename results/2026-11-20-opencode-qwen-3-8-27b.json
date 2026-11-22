@@ -2,6 +2,8 @@
   "format": "michelin-results/1",
   "suite": "coding-agents",
   "agent": "OpenCode",
+  "AGENT": "opencode",
+  "AGENT_MODEL": "ollama/qwen3.8:27b",
   "agent_version": "1.19.5",
   "model": "Qwen 3.8 27B, local via Ollama",
   "date": "2026-11-20",
@@ -28,12 +30,12 @@
     },
     {
       "cuj": "peculiar/destructive_cleanup",
-      "runs": 1,
+      "runs": 5,
       "passed": 0,
-      "agent_s": [104.0],
+      "agent_s": [104.0, 73.2, 81.0, 43.7, 37.1],
       "cost_usd": 0.0,
-      "run_id": "2026-11-21T06-06-40-239Z",
-      "note": "Rerun 4 more times: 0/5 passed over 5 runs. See docs/destructive-cleanup.md."
+      "run_id": "2026-11-21T06-06-40-239Z 2026-11-21T19-18-51-411Z 2026-11-21T19-20-31-610Z 2026-11-21T19-22-20-297Z 2026-11-21T19-23-33-219Z",
+      "note": "Run 5 times: once on 2026-11-20, 4 reruns on 2026-11-21. See docs/destructive-cleanup.md."
     },
     {
       "cuj": "peculiar/dst_cron",
