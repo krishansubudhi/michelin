@@ -12,7 +12,7 @@
 //
 // CUJ files are found and checked in cujs.ts. The runner itself has no LLM. Only the judges see a CUJ's expectations; they run alongside teardown, reading saved outputs, never the subject. Models come from flags, ./michelin.json, then defaults/settings.json via settings.ts (--runs n repeats it all n times).
 // The subject's own install and temp state go in <tmp>/michelin-<user>/runs/<runid>/ (scratch.ts): made before setup, named in the constructor's and destructor's prompts, deleted after the run. Everything else lands in .runs/<runid>/ (spec line 5):
-//   run.json                    the typed index: subject, settings, claude version, setup, statuses, scores, sessions, outputs, times
+//   run.json                    the typed index: subject, settings, claude version, agent under test, setup, statuses, scores, sessions, outputs, times
 //   constructor.json / destructor.json   their checked results ({ok, data} or {ok:false, error}, plus raw text)
 //   <cuj-id>/executor.json      the executor's checked result: steps [{action, input, got, ms}], reply and metrics [{name, value}]; files a step saved for the record (screenshots) sit beside it
 //   <cuj-id>/judge-<model>-<effort>.json  each judge's checked result
@@ -25,9 +25,11 @@ import { readFileSync, writeFileSync, mkdirSync, appendFileSync } from "node:fs"
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadConfig, type Settings } from "./settings.ts";
+import { agentFromEnv, type Agent } from "./agent.ts";
+import type { Run } from "./runjson.ts";
 import { helpText, parseCli, pickTargets, runMain } from "./cli.ts";
 import { PKG_ROOT, init } from "./init.ts";
-import { llm, claudeVersion, toSession, type Llm, type Pick, type Session } from "../llm/models.ts";
+import { llm, claudeVersion, toSession, type Llm, type Pick } from "../llm/models.ts";
 import { judgeCuj } from "../llm/judge.ts";
 import {
   SETUP,
@@ -125,38 +127,12 @@ export type Ctx = {
   llm: Llm;
   /** `claude --version`, recorded in run.json; null or omitted if unknown. */
   claudeVersion?: string | null;
+  /** The agent and model the subject drives (agent.ts), recorded in run.json; null or omitted if none. */
+  agent?: Agent | null;
   /** The subject's scratch folder, <tmp>/michelin-<user>/runs/<runid>; omitted in tests. */
   scratch?: string;
 };
 
-/** run.json: the single typed index of one run. */
-export type Run = {
-  /** Subject folder, e.g. "subjects/toy". */
-  subject: string;
-  /** Models per role. */
-  settings: Settings;
-  /** `claude --version` of the CLI that ran every call, e.g. "2.1.318 (Claude Code)"; null if unknown. */
-  claudeVersion: string | null;
-  /** ISO start time. */
-  started: string;
-  /** ISO end time; null while running. */
-  finished: string | null;
-  heartbeat?: string; // ISO time of the runner's last sign of life, every 10s; stale means it died
-  /** "ok", "failed", or "" before the constructor returns. */
-  setup: "" | "ok" | "failed";
-  /** Why setup failed (the call's error or the constructor's notes); null if it worked. */
-  setupError: string | null;
-  /** Per-CUJ definition: its file and instruction, e.g. {"toy-country": {path: "subjects/toy/cujs/toy/country.yaml", ...}}. */
-  defs: Record<string, { path: string; instruction: string; timeout_s: number }>;
-  /** Per-CUJ run status: "done", "error: ...", or "skipped (setup failed)". */
-  cujs: Record<string, string>;
-  /** Per-CUJ "passed k/n" or "unjudged". */
-  scores: Record<string, string>;
-  /** Every LLM call: "constructor", "destructor", "<cuj>/executor", "<cuj>/judge-<model>-<effort>". */
-  sessions: Record<string, Session>;
-  /** Each role's output file, relative to the run folder, keyed like sessions. */
-  outputs: Record<string, string>;
-};
 /** Status of a CUJ that never ran because setup failed. */
 export const SKIPPED = "skipped (setup failed)";
 
@@ -277,6 +253,7 @@ export async function runSubject(ctx: Ctx, subject: string, cujs: (readonly [str
     subject,
     settings: ctx.settings,
     claudeVersion: ctx.claudeVersion ?? null,
+    agent: ctx.agent ?? null,
     started: new Date().toISOString(),
     finished: null,
     setup: "",
@@ -359,7 +336,15 @@ async function runOnce(subject: string, settings: Settings, cujs: (readonly [str
   };
   const scratch = scratchFor(dir);
   makeScratch(scratch);
-  const ctx = { settings, dir, read, claudeVersion: claudeVersion(), llm: logged, scratch };
+  const ctx = {
+    settings,
+    dir,
+    read,
+    claudeVersion: claudeVersion(),
+    agent: agentFromEnv(process.env),
+    llm: logged,
+    scratch,
+  };
   const run = await runSubject(ctx, subject, cujs).finally(() => dropScratch(scratch));
   const { setup, setupError, cujs: status, scores } = run;
   console.log(`${JSON.stringify({ setup, setupError, status, scores }, null, 2)}\n${reportUrl(dir)}`);

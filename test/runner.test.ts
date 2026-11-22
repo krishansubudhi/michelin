@@ -201,6 +201,15 @@ test("a good run writes run.json with every session, and each role's typed JSON"
   assert.ok(existsSync(join(ctx.dir, "report.html")), "report.html is written at the end");
 });
 
+test("run.json records the agent and model under test, and null when the run names none", async () => {
+  const { ctx } = fake(happy);
+  await runSubject({ ...ctx, agent: { AGENT: "agy", AGENT_MODEL: "gemini-4-neon-medium" } }, "subj", [...two]);
+  assert.deepEqual(runJson(ctx).agent, { AGENT: "agy", AGENT_MODEL: "gemini-4-neon-medium" });
+  const { ctx: bare } = fake(happy);
+  await runSubject(bare, "subj", [...two]);
+  assert.equal(runJson(bare).agent, null);
+});
+
 test("a failed setup skips every CUJ: no executor, no judge, still destructs, exits non-zero", async () => {
   const notOk = { ok: false, steps: ["looked for harness"], notes: "harness not found: test/fixtures/nope.py" };
   for (const [setupReply, why] of [
