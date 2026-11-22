@@ -4,7 +4,7 @@
 // Test: npm test (cujs.test.ts, no LLM).
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { parse } from "yaml";
 
 /** Where subjects live, relative to the repo root: real ones, and test-only ones. Each is <dir>/<name>/ with its .md files and cujs/. */
@@ -43,11 +43,62 @@ export type Cuj = {
   expectations: string[];
   /** The world before the CUJ starts, e.g. {memory: ["..."], health: {sleep_h: 5}}: setup seeds it, the executor and
    *  judges are told it, the subject never is. */
+  /** The world before the CUJ starts, e.g. {memory: ["..."], health: {sleep_h: 5}}: setup seeds it, the executor and
+   *  judges are told it, the subject never is. */
   given?: Record<string, unknown>;
+  /** Names of what the subject's howtorun.md must explain for this CUJ to run, e.g. ["New session", "Local port"].
+   *  The yaml lists names defined in the CUJ root's needs.md; loadCuj adds that file's always-required ones. */
+  needs?: string[];
+};
+
+/** The "## Name" headings of a markdown text, lower-cased, e.g. ["new session", "local port"]. Pure. */
+const headings = (md: string) =>
+  md
+    .split("\n")
+    .filter((l) => l.startsWith("## "))
+    .map((l) => l.slice(3).trim().toLowerCase());
+
+/**
+ * Read the needs a CUJ may name: needs.md in the CUJ root (the cujs/ folder above the file), each need a "## Name"
+ * heading plus a line saying what a subject must explain. Those under a "# Always ..." heading apply to every CUJ.
+ *
+ * @param path A CUJ file, e.g. "subjects/personal-agents/cujs/hard/a.yaml" (reads subjects/personal-agents/cujs/needs.md).
+ * @returns    e.g. {always: ["New session"], all: ["new session", "local port"]}; both empty when there is no needs.md.
+ */
+export function readNeeds(path: string): { always: string[]; all: string[] } {
+  const full = resolve(path);
+  const file = join(full.slice(0, full.lastIndexOf("/cujs/") + 5), "needs.md");
+  if (!full.includes("/cujs/") || !existsSync(file)) return { always: [], all: [] };
+  const md = readFileSync(file, "utf8");
+  const always = md.split(/^# /m).filter((s) => /^always/i.test(s));
+  return { always: always.flatMap((s) => s.match(/^## .+$/gm) ?? []).map((l) => l.slice(3).trim()), all: headings(md) };
+}
+
+/**
+ * The needs a subject's howtorun.md does not answer. A need is answered by a "## <name>" heading (any letter case):
+ * a text match, so the same CUJ is never run one day and left out the next. Pure.
+ *
+ * @param howtorun Contents of <subject>/howtorun.md.
+ * @param cuj      The loaded CUJ.
+ * @returns        The missing names, e.g. ["Same session"]; [] if all are answered or the CUJ needs nothing.
+ */
+export const unanswered = (howtorun: string, cuj: { needs?: string[] }): string[] =>
+  (cuj.needs ?? []).filter((n) => !headings(howtorun).includes(n.toLowerCase()));
+
+/**
+ * The status of a CUJ this subject cannot run, or null if it can. Pure.
+ *
+ * @param howtorun Contents of <subject>/howtorun.md.
+ * @param cuj      The CUJ.
+ * @returns        e.g. "unsupported: howtorun.md has no section: Same session, Local port"; null if nothing is missing.
+ */
+export const unsupported = (howtorun: string, cuj: { needs?: string[] }): string | null => {
+  const missing = unanswered(howtorun, cuj);
+  return missing.length ? `unsupported: howtorun.md has no section: ${missing.join(", ")}` : null;
 };
 
 /** Every key a CUJ yaml may have; story is a note for humans, nothing reads it. */
-const CUJ_KEYS = ["instruction", "timeout_s", "expectations", "story", "given"];
+const CUJ_KEYS = ["instruction", "timeout_s", "expectations", "story", "given", "needs"];
 
 /** True if c has instruction (string), timeout_s (number) and expectations (list of strings). Pure. */
 const hasCujTypes = (c: Record<string, unknown> | null | undefined): c is Cuj =>
@@ -58,6 +109,10 @@ const hasCujTypes = (c: Record<string, unknown> | null | undefined): c is Cuj =>
 
 /** True if v is a map ({key: value}), not a list, null or a scalar. */
 const isMap = (v: unknown) => typeof v === "object" && v !== null && !Array.isArray(v);
+
+/** True if a CUJ's needs is absent or a list of non-empty strings, e.g. ["Local port"]. */
+const needsOk = (v: unknown) =>
+  v === undefined || (Array.isArray(v) && v.every((n: unknown) => typeof n === "string" && !!n.trim()));
 
 /**
  * What's wrong with a parsed CUJ, if anything. Pure.
@@ -75,21 +130,26 @@ function cujProblem(c: Record<string, unknown> | null | undefined): string | nul
     return "expectations must be a non-empty list of non-empty strings";
   }
   if ("given" in c && !isMap(c.given)) return "given must be a map of key: value, e.g. given: {memory: [...]}";
-  return null;
+  return needsOk(c.needs) ? null : "needs must be a list of names from needs.md, e.g. needs: [Local port]";
 }
 
 /**
  * Read one CUJ yaml file and check every field.
  *
  * @param path Path to the .yaml file, e.g. "test/fixtures/subjects/toy-v1/cujs/chat/name.yaml".
- * @returns    The parsed CUJ.
- * @throws     If a field is missing, has the wrong type, or is empty or non-positive, naming the file.
+ * @returns    The parsed CUJ; its needs are the always-required ones from the CUJ root's needs.md, then its own.
+ * @throws     If a field is missing, has the wrong type, is empty or non-positive, or names a need that needs.md
+ *             does not define, naming the file.
  */
 export function loadCuj(path: string): Cuj {
   const c = parse(readFileSync(path, "utf8"));
   const problem = cujProblem(c);
   if (problem) throw new Error(`${path}: ${problem}`);
-  return c;
+  const { always, all } = readNeeds(path);
+  const unknown = (c.needs ?? []).filter((n: string) => !all.includes(n.toLowerCase()));
+  if (unknown.length) throw new Error(`${path}: need not defined in the CUJ root's needs.md: ${unknown.join(", ")}`);
+  const needs = [...new Set([...always, ...(c.needs ?? [])])];
+  return needs.length ? { ...c, needs } : c;
 }
 
 /** True if `path` is an existing folder, e.g. "cujs/chat/". */

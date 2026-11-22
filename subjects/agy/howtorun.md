@@ -1,0 +1,15 @@
+The program is a terminal AI agent. Each call blocks until the agent is done and prints its reply. Give each call a 15-minute shell timeout.
+
+## New session
+
+```bash
+cd $RUNDIR && agy --model gemini-4-neon-medium --dangerously-skip-permissions -p "MESSAGE" < /dev/null 2>&1
+```
+
+## Same session
+
+```bash
+cd $RUNDIR && agy --model gemini-4-neon-medium --dangerously-skip-permissions --continue -p "MESSAGE" < /dev/null 2>&1
+```
+
+Never fix the agent's work yourself.

@@ -1,0 +1,6 @@
+story: Responds to a query with correct information by searching web.
+timeout_s: 600
+instruction: |
+  How much did india score (along with how many wickets india lost) in first innings of India vs NZ 1st test, 1st innings at wellington 2026.
+expectations:
+  - Correct answer given.  correct answer is 720 for 9 wickets. Correct answer should be given. Extra details are welcome. Should not say I dont konw or should not hallucinate.

@@ -41,7 +41,7 @@ export const scratchFor = (runDir: string) => join(SCRATCH_ROOT, basename(runDir
  * @returns   The prompt line.
  */
 export const scratchNote = (dir: string) =>
-  `Scratch folder for this run (exists, empty at setup, deleted after teardown): ${dir}. Put any install or temp state there, nowhere else in /tmp.`;
+  `RUNDIR=${dir}: this run's folder (exists, empty at setup, deleted after teardown). Where a CUJ or howtorun says $RUNDIR, use this path. Put any install or temp state there, nowhere else in /tmp.`;
 
 /**
  * Make the scratch folder.

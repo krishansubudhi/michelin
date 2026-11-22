@@ -164,4 +164,4 @@ function main() {
   writeFileSync(join(values.out, "results.json"), JSON.stringify(rows, null, 1));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (import.meta.main) main();

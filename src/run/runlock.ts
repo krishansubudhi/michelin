@@ -1,17 +1,20 @@
-// One michelin run at a time, across processes and users: setup.md picks ports by scanning up from 8797, which races.
-// The lock is <tmp>/michelin-<user>/run.lock ($MICHELIN_TMP/run.lock when set), holding {pid, user, started}. The default folder is per user;
+// One michelin run per subject at a time: a subject's setup.md may pick ports by scanning up from 8797, which races; different
+// subjects run side by side. The lock is <tmp>/michelin-<user>/run-<subject>.lock (lockFor; base RUN_LOCK) ($MICHELIN_TMP/run.lock when set), holding {pid, user, started}. The default folder is per user;
 // a MICHELIN_TMP shared by every OS user (sticky 1777) locks across users, so the file is made 0644 by an atomic exclusive link of a fully written temp file.
 //
 // Test: npm test (runlock.test.ts, no LLM).
 
 import { linkSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { userInfo } from "node:os";
-import { dirname } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { TMP_ROOT } from "./scratch.ts";
 
 /** Where the lock lives. */
 export const RUN_LOCK = `${TMP_ROOT}/run.lock`;
+
+/** The lock for one subject, e.g. "subjects/agy" -> "/tmp/michelin/run-agy.lock". Pure. */
+export const lockFor = (subject: string) => join(dirname(RUN_LOCK), `run-${basename(resolve(subject))}.lock`);
 
 /** True if pid is a live process; EPERM means alive but another user's. */
 export const alive = (pid: number) => {

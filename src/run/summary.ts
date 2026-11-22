@@ -43,3 +43,11 @@ export function summary(
  * @returns   1 if setup failed (nothing was tested), else 0. Failing CUJs are results, not errors.
  */
 export const exitCode = (run: { setup: string }) => (run.setup === "ok" ? 0 : 1);
+
+/**
+ * Whether a CUJ's executor was called, so there is something to judge. Pure.
+ *
+ * @param status The CUJ's status in run.json, e.g. "done", "error: timed out", "unsupported: ...".
+ * @returns      True for "done" and "error: ..."; false for a CUJ that was skipped or unsupported, or has no status.
+ */
+export const didRun = (status: string | undefined) => /^(done|error)/.test(status ?? "");

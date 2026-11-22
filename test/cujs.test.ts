@@ -13,6 +13,8 @@ import {
   loadCuj,
   resolveArg,
   runGroups,
+  unanswered,
+  unsupported,
 } from "../src/run/cujs.ts";
 
 const tmp = (p: string) => mkdtempSync(join(tmpdir(), p));
@@ -48,6 +50,27 @@ test("loadCuj refuses a given that is not a map", () => {
     writeFileSync(p, `instruction: hi\ntimeout_s: 5\nexpectations: [a]\ngiven: ${g}\n`);
     assert.throws(() => loadCuj(p), /given\.yaml: given must be a map/);
   }
+});
+
+test("needs: names from the CUJ root's needs.md; unanswered lists those howtorun.md has no heading for", () => {
+  const root = join(tmp("needs-"), "cujs");
+  mkdirSync(join(root, "hard"), { recursive: true });
+  writeFileSync(join(root, "needs.md"), "# Always\n## New session\nHow to start one.\n# By case\n## Local port\nx\n");
+  const [p, plain] = [join(root, "hard", "a.yaml"), join(root, "hard", "b.yaml")];
+  const body = "instruction: hi\ntimeout_s: 5\nexpectations: [a]\n";
+  writeFileSync(p, `${body}needs: [Local port]\n`);
+  writeFileSync(plain, body);
+  const cuj = loadCuj(p);
+  assert.deepEqual(cuj.needs, ["New session", "Local port"]); // the always-required one comes from needs.md
+  assert.deepEqual(loadCuj(plain).needs, ["New session"]); // also for a CUJ that lists none
+  assert.deepEqual(unanswered("## NEW SESSION\nlike this\nLocal port: yes", cuj), ["Local port"]); // a heading, any case
+  assert.deepEqual(unanswered("## New session\na\n## Local port\nb", cuj), []);
+  assert.equal(unsupported("## Local port\nb", cuj), "unsupported: howtorun.md has no section: New session");
+  assert.deepEqual(unanswered("Run toy.py", {}), []); // no needs.md in the CUJ root: nothing is asked
+  writeFileSync(p, `${body}needs: [Teleport]\n`);
+  assert.throws(() => loadCuj(p), /a\.yaml: need not defined in the CUJ root's needs\.md: Teleport/);
+  writeFileSync(p, `${body}needs: a port\n`);
+  assert.throws(() => loadCuj(p), /needs must be a list of names/);
 });
 
 test("a CUJ path becomes its id: the path under cujs/", () => {

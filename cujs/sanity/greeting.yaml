@@ -1,0 +1,7 @@
+story: Responds to hi in friendly manner
+timeout_s: 120
+instruction: |
+  Say hello
+expectations:
+  - responds with a warm greeting back.
+  - Replies within 10 seconds.

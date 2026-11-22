@@ -11,7 +11,7 @@
 // Every role returns typed JSON (claude --json-schema), validated on arrival; an invalid result is an error. A failed setup skips every CUJ (no executor, no judge), still destructs, and exits 1.
 //
 // CUJ files are found and checked in cujs.ts. The runner itself has no LLM. Only the judges see a CUJ's expectations; they run alongside teardown, reading saved outputs, never the subject. Models come from flags, ./michelin.json, then defaults/settings.json via settings.ts (--runs n repeats it all n times).
-// The subject's own install and temp state go in <tmp>/michelin-<user>/runs/<runid>/ (scratch.ts): made before setup, named in the constructor's and destructor's prompts, deleted after the run. Everything else lands in .runs/<runid>/ (spec line 5):
+// The subject's own install and temp state go in <tmp>/michelin-<user>/runs/<runid>/ (scratch.ts): made before setup, named RUNDIR in the constructor's, executor's and destructor's prompts, deleted after the run. Everything else lands in .runs/<runid>/ (spec line 5):
 //   run.json                    the typed index: subject, settings, claude version, agent under test, setup, statuses, scores, sessions, outputs, times
 //   constructor.json / destructor.json   their checked results ({ok, data} or {ok:false, error}, plus raw text)
 //   <cuj-id>/executor.json      the executor's checked result: steps [{action, input, got, ms}], reply and metrics [{name, value}]; files a step saved for the record (screenshots) sit beside it
@@ -43,11 +43,11 @@ import {
   type Teardown,
 } from "../llm/schemas.ts";
 import { reportUrl, runDirLine, writeReport } from "../report/report.ts";
-import { checkUniqueIds, cujId, expandCujs, loadCuj, resolveArg, runGroups, type Cuj } from "./cujs.ts";
+import { checkUniqueIds, cujId, expandCujs, loadCuj, resolveArg, runGroups, unsupported, type Cuj } from "./cujs.ts";
 import { playNote, seedNote, sharedGiven, unseeded, type Given } from "./given.ts";
-import { exitCode, summary } from "./summary.ts";
+import { didRun, exitCode, summary } from "./summary.ts";
 import { dropScratch, makeScratch, scratchFor, scratchNote } from "./scratch.ts";
-import { acquireRunLock } from "./runlock.ts";
+import { acquireRunLock, lockFor } from "./runlock.ts";
 
 /**
  * Build the constructor's prompt.
@@ -76,7 +76,7 @@ const BROWSER_SKILL = fileURLToPath(new URL("../../skills/browser/SKILL.md", imp
  * @param cuj         The CUJ: its instruction, and its given (seeded by setup) if any.
  * @param root        Absolute path of the michelin folder, e.g. "/srv/michelin"; howtorun's relative paths start there.
  * @param opts        setup: what setup reported (same text teardown gets), e.g. its PORT and TOKEN; "" if none.
- *                    out: absolute path of this CUJ's run folder, e.g. "/repo/.runs/<runid>/chat-name"; "" to leave it out.
+ *                    out: absolute path of this CUJ's run folder, e.g. "/repo/.runs/<runid>/chat-name"; rundir: RUNDIR (scratch.ts). "" leaves either out.
  *                    skill: the browser skill file, e.g. "/pkg/skills/browser/SKILL.md"; default this package's.
  * @returns           The full prompt text.
  */
@@ -84,14 +84,20 @@ export const executorPrompt = (
   howtorun: string,
   cuj: { instruction: string; given?: Given },
   root: string,
-  { setup = "", out = "", skill = BROWSER_SKILL }: { setup?: string; out?: string; skill?: string } = {},
+  {
+    setup = "",
+    out = "",
+    rundir = "",
+    skill = BROWSER_SKILL,
+  }: { setup?: string; out?: string; rundir?: string; skill?: string } = {},
 ) =>
   [
     "You are testing a program. How to run it:",
     howtorun,
     ...(setup ? [`Setup output (use these values; this is your instance):\n${setup}`] : []),
     ...(cuj.given ? [playNote(cuj.given)] : []),
-    `The michelin folder is ${root}. Your working directory is a scratch folder; cd to ${root} to run the program.`,
+    ...(rundir ? [scratchNote(rundir)] : []),
+    `The michelin folder is ${root}; howtorun's relative paths start there. Run each command in the folder howtorun gives (cd ${root} only if it gives none).`,
     "Your task:",
     cuj.instruction,
     'Return steps: one per call you made to the program, each {action: what you did, e.g. "run"; input: what you sent; got: what it printed, verbatim and in full (never shorten it, summarise it or elide any part with "..." or "{...}": a judge sees only what you put here); ms: how long it took}.',
@@ -198,17 +204,17 @@ async function construct(ctx: Ctx, run: Run, given?: Given): Promise<void> {
 
 /**
  * b. Execute one CUJ: the executor LLM follows its instruction, killed at timeout_s.
- *
- * @param ctx  The run context.
- * @param run  The run index.
+ * @param ctx  The run context; run is the run index.
  * @param path The CUJ file; its id names the output folder.
  * @param cuj  The loaded CUJ.
- * @returns    "done", or "error: <why>" if the executor gave no valid result. Writes <id>/executor.json.
+ * @returns    "done", "error: <why>" (no valid result), or "unsupported: ..." (cujs.ts; no executor, no executor.json).
  */
 async function execute(ctx: Ctx, run: Run, path: string, cuj: Cuj): Promise<string> {
+  const no = unsupported(ctx.read("howtorun.md"), cuj);
+  if (no) return no;
   const id = cujId(path);
   mkdirSync(join(ctx.dir, id));
-  const opts = { setup: setupReport(ctx.dir), out: resolve(ctx.dir, id) };
+  const opts = { setup: setupReport(ctx.dir), out: resolve(ctx.dir, id), rundir: ctx.scratch };
   const c = await callRole<ExecutorResult>(ctx, run, {
     label: `${id}/executor`,
     pick: ctx.settings.executor,
@@ -298,7 +304,7 @@ export async function runSubject(ctx: Ctx, subject: string, cujs: (readonly [str
     }
     // c ∥ d. Teardown (always, even if a CUJ threw) and every judge of a CUJ that ran start together: judges read
     // only the CUJ outputs saved in the run dir, never the subject. Each result is saved as it lands.
-    const judges = (crash ? [] : cujs).filter(([p]) => run.cujs[cujId(p)] !== SKIPPED).map(([p, c]) => judge(p, c));
+    const judges = (crash ? [] : cujs).filter(([p]) => didRun(run.cujs[cujId(p)])).map(([p, c]) => judge(p, c));
     const done = await Promise.allSettled([destruct(ctx, run).finally(save), ...judges]);
     const bad = done.find((r) => r.status === "rejected");
     if (crash) throw crash.e; // only after teardown and every result is in
@@ -370,7 +376,7 @@ async function main() {
   const groups = runGroups(picked, loaded);
   for (const g of groups) sharedGiven(g); // refuse mixed givens before any setup
   const runs: Run[] = [];
-  const release = await acquireRunLock(); // one run at a time: setup picks ports by scanning, which races (runlock.ts)
+  const release = await acquireRunLock(lockFor(subject)); // one run per subject: setup may pick ports by scanning (runlock.ts)
   try {
     for (let i = 0; i < times; i++) for (const group of groups) runs.push(await runOnce(subject, settings, group));
   } finally {

@@ -1,0 +1,6 @@
+story: "Control case: it must FAIL. The expectation is wrong on purpose, so a PASS means the judge is not reading the reply."
+timeout_s: 120
+instruction: |
+  What is 2 + 2? Reply with just the number.
+expectations:
+  - The reply says the answer is 5.
