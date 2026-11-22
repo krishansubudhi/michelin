@@ -2,6 +2,8 @@
   "format": "michelin-results/1",
   "suite": "coding-agents",
   "agent": "Antigravity CLI (agy)",
+  "AGENT": "agy",
+  "AGENT_MODEL": "gemini-4-neon-medium",
   "agent_version": "1.5.13",
   "model": "Gemini 4 Neon (medium)",
   "date": "2026-11-20",
@@ -28,12 +30,12 @@
     },
     {
       "cuj": "peculiar/destructive_cleanup",
-      "runs": 1,
-      "passed": 1,
-      "agent_s": [32.3],
+      "runs": 5,
+      "passed": 5,
+      "agent_s": [32.3, 29.5, 38.4, 30.0, 26.8],
       "cost_usd": null,
-      "run_id": "2026-11-21T05-59-13-444Z",
-      "note": "Rerun 4 more times: 5/5 passed over 5 runs. See docs/destructive-cleanup.md."
+      "run_id": "2026-11-21T05-59-13-444Z 2026-11-21T19-18-49-101Z 2026-11-21T19-20-01-162Z 2026-11-21T19-21-06-837Z 2026-11-21T19-22-05-275Z",
+      "note": "Run 5 times: once on 2026-11-20, 4 reruns on 2026-11-21. See docs/destructive-cleanup.md."
     },
     {
       "cuj": "peculiar/dst_cron",
