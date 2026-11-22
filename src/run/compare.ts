@@ -165,7 +165,8 @@ function cujEntry(dir: string, id: string, run: Loose): Side["cujs"][string] {
 /**
  * Load one run for comparison.
  *
- * @param dir  The run folder, e.g. "/repo/.runs/2026-11-17T10-00-00-000Z"; must hold run.json.
+ * @param dir  The run folder, e.g. "/repo/.runs/2026-11-17T10-00-00-000Z"; must hold run.json. Several, comma-separated,
+ *             are one side: each a run of one CUJ (runGroups), merged.
  * @param name What to call it, e.g. "gemma"; hidden from the judges like the run's own identifiers.
  * @param hide More strings to hide (--hide), e.g. ["my-laptop"].
  * @returns    The side: per CUJ the executor's evidence, the instruction (run.json defs) and the expectations
@@ -173,6 +174,11 @@ function cujEntry(dir: string, id: string, run: Loose): Side["cujs"][string] {
  * @throws     If dir has no readable run.json.
  */
 export function loadSide(dir: string, name: string, hide: string[] = []): Side {
+  if (dir.includes(",")) {
+    const parts = dir.split(",").map((d) => loadSide(d, name, hide)); // one agent's runs, one per CUJ
+    const ids = [...new Set(parts.flatMap((p) => p.ids))];
+    return { name, dir: parts[0].dir, ids, cujs: Object.assign({}, ...parts.map((p) => p.cujs)) };
+  }
   const run = readJson(join(dir, "run.json"));
   if (!run || typeof run !== "object") throw new Error(`${join(dir, "run.json")}: missing or not valid JSON`);
   const notes = readJson(join(dir, "constructor.json"))?.data?.notes;
@@ -192,8 +198,11 @@ export function loadSide(dir: string, name: string, hide: string[] = []): Side {
 function nameRuns(args: string[], cwd: string): [string, string][] {
   const parsed = args.map((a) => {
     const { name, dir } = parseRunArg(a);
-    const abs = resolve(cwd, dir);
-    const subject = readJson(join(abs, "run.json"))?.subject;
+    const abs = dir
+      .split(",")
+      .map((d) => resolve(cwd, d))
+      .join(",");
+    const subject = readJson(join(abs.split(",")[0], "run.json"))?.subject;
     return { name, dir: abs, auto: basename(typeof subject === "string" ? subject : abs) };
   });
   const count = (n: string) => parsed.filter((p) => !p.name && p.auto === n).length;

@@ -156,15 +156,13 @@ export function loadCuj(path: string): Cuj {
 const isFolder = (path: string) => !!statSync(path, { throwIfNoEntry: false })?.isDirectory();
 
 /**
- * Group CUJ files into runs. Files listed one by one share one run (one setup, one teardown); once any argument
- * is a folder, every CUJ gets a fresh start: a run of its own, with its own setup and teardown.
+ * Group CUJ files into runs: every CUJ gets a fresh start, a run of its own with its own setup, RUNDIR and teardown,
+ * however it was named on the command line. Pure.
  *
- * @param args  The command-line CUJ arguments, e.g. ["cujs/chat/"].
- * @param files The same, expanded by expandCujs, e.g. ["cujs/chat/a.yaml", "cujs/chat/b.yaml"].
+ * @param files The CUJs, expanded by expandCujs, e.g. ["cujs/chat/a.yaml", "cujs/chat/b.yaml"].
  * @returns     The runs in order, each a list of files, e.g. [["cujs/chat/a.yaml"], ["cujs/chat/b.yaml"]].
  */
-export const runGroups = <T>(args: string[], files: T[]): T[][] =>
-  args.some(isFolder) ? files.map((f) => [f]) : [files];
+export const runGroups = <T>(files: T[]): T[][] => files.map((f) => [f]);
 
 /**
  * Expand CUJ arguments: a folder becomes every *.yaml directly in it, sorted; a file stays as given.

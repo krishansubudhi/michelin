@@ -3,7 +3,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -115,6 +115,14 @@ test("standings: wins, losses, ties; a tie is 50%; Elo is symmetric around 1000;
     ],
   );
   assert.ok(Math.abs(three.reduce((s, r) => s + r.elo, 0) - 3000) < 1e-9);
+});
+
+test("loadSide: comma-separated run folders are one side, their CUJs merged", () => {
+  const root = mkdtempSync(join(tmpdir(), "cmp-"));
+  const [a, b] = [fakeRun(root, "a", "m1", "13"), fakeRun(root, "b", "m1", "13")];
+  renameSync(join(b, "math-add"), join(b, "math-sub"));
+  writeFileSync(join(b, "run.json"), readFileSync(join(b, "run.json"), "utf8").replaceAll("math-add", "math-sub"));
+  assert.deepEqual(Object.keys(loadSide(`${a},${b}`, "m").cujs).sort(), ["math-add", "math-sub"]);
 });
 
 test("loadSide: evidence, instruction, expectations and every identifier to hide", () => {

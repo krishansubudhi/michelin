@@ -358,7 +358,7 @@ async function runOnce(subject: string, settings: Settings, cujs: (readonly [str
 }
 
 /**
- * The program: parse args (init and compare go to init.ts and compare.ts), load config and CUJs, then one run (one per CUJ for a folder: runGroups), all `runs` times.
+ * The program: parse args (init and compare go to init.ts and compare.ts), load config and CUJs, then one run per CUJ (runGroups), all `runs` times.
  * Holds the run lock (<tmp>/michelin-<user>/run.lock, or $MICHELIN_TMP/run.lock) for all of it, waiting for any other live run first (runlock.ts).
  * Ends with a PASS/FAIL line per CUJ and the total; exits 1 if any setup failed.
  */
@@ -373,7 +373,7 @@ async function main() {
   const files = expandCujs(picked);
   checkUniqueIds(files);
   const loaded = files.map((p) => [p, loadCuj(p)] as const);
-  const groups = runGroups(picked, loaded);
+  const groups = runGroups(loaded);
   for (const g of groups) sharedGiven(g); // refuse mixed givens before any setup
   const runs: Run[] = [];
   const release = await acquireRunLock(lockFor(subject)); // one run per subject: setup may pick ports by scanning (runlock.ts)

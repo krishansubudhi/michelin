@@ -29,7 +29,7 @@ export const RUN_USAGE = `usage: michelin run [options] [<subject> <cuj> [cuj ..
                     default michelin.json's subject
   <cuj> ...         one or more CUJ yaml files or folders, e.g. subjects/toy/cujs/toy/country.yaml or
                     subjects/toy/cujs/toy/;
-                    a folder runs every *.yaml directly in it, sorted, each on a fresh start (its own setup/teardown);
+                    a folder runs every *.yaml in it, sorted; each CUJ gets its own setup/teardown;
                     default michelin.json's cujs (positionals given: both subject and CUJs come from the command line)
   --executor m[@e]  the executor's model, e.g. claude-sonnet-5-5 or claude-sonnet-5-5@high (effort kept unless given)
   --judges a,b@e    the judge list, e.g. claude-opus-5-5,claude-sonnet-5-5@medium (effort high unless given)

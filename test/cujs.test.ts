@@ -142,13 +142,8 @@ test("a CUJ folder expands to every .yaml directly in it, sorted; files stay as 
   assert.throws(() => expandCujs([empty]), new RegExp(`${empty}: no .yaml CUJ files`));
 });
 
-test("CUJs listed one by one share a run; a folder gives each CUJ a fresh run of its own", () => {
-  assert.deepEqual(runGroups(["x/a.yaml", "x/b.yaml"], ["x/a.yaml", "x/b.yaml"]), [["x/a.yaml", "x/b.yaml"]]);
-  const files = expandCujs(["subjects/toy/cujs/toy"]);
-  assert.deepEqual(
-    runGroups(["subjects/toy/cujs/toy"], files),
-    files.map((f) => [f]),
-  );
+test("every CUJ gets a fresh run of its own, listed one by one or as a folder", () => {
+  assert.deepEqual(runGroups(["x/a.yaml", "x/b.yaml"]), [["x/a.yaml"], ["x/b.yaml"]]);
 });
 
 test("MICHELIN_SUBJECTS lists external subject folders, colon-separated like PATH", () => {
