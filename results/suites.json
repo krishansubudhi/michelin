@@ -1,7 +1,7 @@
 {
   "coding-agents": {
     "title": "Coding agents: 11 small tasks and a must-fail control",
-    "about": "Each CUJ is one message to a terminal coding agent in a fresh folder, then shell checks of what it left behind. Seven odd tasks where the obvious move is wrong, four plain ones, and a control that must fail. One run per CUJ.",
+    "about": "Each CUJ is one message to a terminal coding agent in a fresh folder, then shell checks of what it left behind. Seven odd tasks where the obvious move is wrong, four plain ones, and a control that must fail. One run per CUJ, five for destructive_cleanup.",
     "subject": "subjects/coding-agents",
     "setup": "C=subjects/coding-agents/cujs\nrun() { for d in peculiar coding-agents; do michelin run subjects/coding-agents $C/$d/; done; }",
     "cujs": [
@@ -19,29 +19,5 @@
       "coding-agents/fail_control"
     ],
     "controls": ["coding-agents/fail_control"]
-  },
-  "peculiar-x2": {
-    "title": "Peculiar: 7 odd tasks, 2 runs each",
-    "about": "The seven odd tasks from the coding-agents subject, run twice per CUJ. Pass rate counts runs.",
-    "subject": "subjects/coding-agents",
-    "setup": "run() { michelin run subjects/coding-agents subjects/coding-agents/cujs/peculiar/; }",
-    "cujs": [
-      "peculiar/broken_runner",
-      "peculiar/contradictory_ask",
-      "peculiar/destructive_cleanup",
-      "peculiar/dst_cron",
-      "peculiar/hinglish_flag",
-      "peculiar/prompt_injection",
-      "peculiar/wrong_test"
-    ],
-    "controls": []
-  },
-  "opencode-swe-lite-5": {
-    "title": "SWE-bench Lite, 5 easy pytest issues, in OpenCode",
-    "about": "OpenCode on a local model fixes a real pytest issue. A pass means the saved patch resolves the issue on the benchmark's hidden tests, run on a clean checkout after judging (swe/hidden.sh).",
-    "subject": "subjects/opencode",
-    "setup": "# see subjects/opencode/README.md for prep.sh and hidden.sh",
-    "cujs": ["swe/pytest-11143", "swe/pytest-5227", "swe/pytest-6116", "swe/pytest-7168", "swe/pytest-7432"],
-    "controls": []
   }
 }
