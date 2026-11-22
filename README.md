@@ -50,7 +50,7 @@ FAIL  toy-name     passed 0/1  (done)
 total: 1/2 CUJs passed
 ```
 
-`toy-name` is the must-fail control: the toy always answers "USA", so a healthy judge fails "The reply says Alice". Each CUJ leaves `.runs/<runid>/report.html`.
+`toy-name` is the must-fail control: the toy always answers "USA", so a healthy judge fails "The reply says Alice". One command makes one run folder, `.runs/<runid>/`, with a subfolder and `report.html` per CUJ (`.runs/<runid>/<cuj-id>/`).
 
 **Roles.**
 
@@ -70,6 +70,8 @@ A subject is a folder of three plain-English files the LLM roles follow:
 - `howtorun.md`: how to talk to it (a command, a URL, a chat).
 - `teardown.md`: what to stop and delete afterwards.
 
+Every CUJ gets its own setup, teardown and scratch folder, given to every role as `$RUNDIR`. Ready-made subjects for Claude Code (`subjects/claude_code`) and agy (`subjects/agy`) pair with three quick checks in `cujs/sanity/`: `michelin subjects/claude_code cujs/sanity/`.
+
 A CUJ is a yaml file in `<subject>/cujs/`:
 
 ```yaml
@@ -80,7 +82,7 @@ expectations:
   - The reply says USA.
 ```
 
-An A/B compares two versions of the agent under test, with the executor and the judges kept the same. The toy has two: `TOY_VARIANT=v1` (the default) answers, `TOY_VARIANT=v2` is a broken build that replies "I am not sure". Run the same CUJ on each, then blind judges pick the better run. Each `michelin run` prints its `run dir:`.
+An A/B compares two versions of the agent under test, with the executor and the judges kept the same. The toy has two: `TOY_VARIANT=v1` (the default) answers, `TOY_VARIANT=v2` is a broken build that replies "I am not sure". Run the same CUJ on each, then blind judges pick the better run. Each `michelin run` prints `run dir: .runs/<id>/<cuj>`; give compare the `.runs/<id>` part, and it judges every CUJ both runs share. Wait for both runs to finish first.
 
 ```sh
 TOY_VARIANT=v1 michelin run subjects/toy subjects/toy/cujs/toy/country.yaml

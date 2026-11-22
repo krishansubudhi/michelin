@@ -27,7 +27,7 @@ Speed counts too. Each game records both runs' program time (the sum of the exec
 per-CUJ time table in compare.md and on each game in report.html. A judged tie goes to the run that took 1.5x less time
 or better (`--tiebreak speed`, the default); `--tiebreak none` or `"tiebreak": "none"` in michelin.json keeps it a tie.
 
-**An A/B, end to end.** An A/B compares two versions of the agent under test: run the same CUJ on each, with the executor and the judges kept the same, then compare the two run folders (each run prints its `run dir:`). Changing `--executor` instead would measure Michelin's own agent, not yours.
+**An A/B, end to end.** An A/B compares two versions of the agent under test: run the same CUJ on each, with the executor and the judges kept the same, then compare the two run folders (each run prints `run dir: .runs/<id>/<cuj>`; pass `.runs/<id>`, and several folders for one side go comma-separated). Changing `--executor` instead would measure Michelin's own agent, not yours.
 
 The toy subject has two versions, picked by `TOY_VARIANT`: `v1` (the default) answers, `v2` is a broken build that replies "I am not sure".
 
