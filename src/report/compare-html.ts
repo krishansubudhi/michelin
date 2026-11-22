@@ -6,7 +6,7 @@
 
 import type { Game, Row } from "../run/compare.ts";
 import { metricNames, secs, type Measure } from "../run/measures.ts";
-import { esc, FOOTER_HTML, fmtUsd, judgeTitle, TOPLINE_HTML } from "./html.ts";
+import { esc, FOOTER_HTML, fmtUsd, judgeTitle, pill, TOPLINE_HTML } from "./html.ts";
 import { TAILWIND_CSS } from "./tailwind.gen.ts";
 
 /**
@@ -22,7 +22,16 @@ function named(g: Game, letter: string | null, aIs: "A" | "B"): string {
 }
 
 /**
- * One game as a folded card: the winner, then each judge's two verdicts and why. Pure.
+ * A result as a pill: a tie or no verdict grey, a win green. Pure.
+ *
+ * @param text e.g. "claude wins", "tie" or "no valid verdict".
+ * @returns    HTML.
+ */
+const outcomePill = (text: string) => pill(text === "tie" ? "TIE" : text, /tie|no /i.test(text) ? "na" : "ok");
+
+/**
+ * One game as a folded card: the CUJ and its result as the headline, then each judge's verdict pill (judge name small
+ * and grey) with its two reasons. Pure.
  *
  * @param g The game.
  * @returns HTML.
@@ -31,13 +40,14 @@ function gameHtml(g: Game): string {
   const won = g.winner === null ? "no valid verdict" : g.winner === "tie" ? "tie" : g.winner === "a" ? g.a : g.b;
   const judges = Object.entries(g.judges).map(
     ([m, v], i) =>
-      `<li><b>${esc(judgeTitle(i, m))}</b>: ${esc(v.result ?? "no result")}<ul>` +
+      `<li>${outcomePill(v.result === "first" ? `${g.a} wins` : v.result === "second" ? `${g.b} wins` : (v.result ?? "no valid verdict"))} <span class="muted">${esc(judgeTitle(i, m))}</span><ul>` +
       `<li>${esc(g.a)} shown as A: ${esc(named(g, v.ab, "A"))}. ${esc(v.whyAB)}</li>` +
       `<li>${esc(g.a)} shown as B: ${esc(named(g, v.ba, "B"))}. ${esc(v.whyBA)}</li></ul></li>`,
   );
   return (
-    `<details open><summary>${esc(g.cuj)}: ${esc(g.a)} vs ${esc(g.b)} · winner ${esc(won)}` +
-    `${g.bySpeed ? " (judges tied; faster run)" : ""} · ${esc(g.a)} ${secs(g.ms?.a)}, ${esc(g.b)} ${secs(g.ms?.b)}</summary>` +
+    `<details open><summary><b>${esc(g.cuj)}</b> ${outcomePill(won === "tie" || g.winner === null ? won : `${won} wins`)}` +
+    `<span class="muted">${g.bySpeed ? "judges tied; faster run · " : ""}${esc(g.a)} ${secs(g.ms?.a)}, ` +
+    `${esc(g.b)} ${secs(g.ms?.b)}</span></summary>` +
     `<ul>${judges.join("")}</ul></details>`
   );
 }

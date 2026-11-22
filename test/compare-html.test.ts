@@ -17,7 +17,8 @@ test("compareHtml: header bar, Head-to-head table, cost, and each game's verdict
     html,
     /<h2>Head-to-head<\/h2>[\s\S]*<th scope="row">g&lt;1&gt;<\/th><td>1-0-0<\/td><td>100%<\/td><td>1016/,
   );
-  assert.match(html, /math-add: g&lt;1&gt; vs q · winner g&lt;1&gt;/);
+  assert.match(html, /<b>math-add<\/b> <span class="pill ok">g&lt;1&gt; wins<\/span>/);
+  assert.match(html, /<span class="pill ok">g&lt;1&gt; wins<\/span> <span class="muted">Judge 1 \(/);
   assert.match(html, /g&lt;1&gt; shown as A: g&lt;1&gt;\. A said 13[\s\S]*shown as B: g&lt;1&gt;\. B said 13/);
   assert.doesNotMatch(html, /<1>/);
 });
