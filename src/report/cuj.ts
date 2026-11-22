@@ -44,7 +44,8 @@ export function shortJudge(name: string): string {
 }
 
 /** A judge's short label with its full name on hover and for assistive tech. Pure. */
-const judgeLabel = (name: string) => `<abbr class="jn" title="${esc(name)}">${esc(shortJudge(name))}</abbr>`;
+const judgeLabel = (i: number, name: string) =>
+  `<abbr class="jn" title="${esc(name)}">Judge ${i + 1} (${esc(shortJudge(name))})</abbr>`;
 
 /** A step's measured time in ms, 0 if missing. Pure. */
 const stepMs = (s: Step) => Number(s.ms) || 0;
@@ -82,13 +83,14 @@ function replyHtml(ex: CujView["executor"]): string {
 /**
  * One judge's verdict on one expectation: its label, pass/fail, and reason. Pure.
  *
+ * @param i     0-based judge index, for "Judge N".
  * @param judge Judge name, e.g. "claude-opus-5-5-high".
  * @param v     Its vote, or null if it gave no usable result.
  * @returns     HTML list item.
  */
-function voteHtml(judge: string, v: Vote | null): string {
+function voteHtml(i: number, judge: string, v: Vote | null): string {
   const why = v?.why ? ` <span class="why">${esc(v.why)}</span>` : "";
-  return `<li><span class="jv">${judgeLabel(judge)} ${verdictPill(v ? v.pass : null)}</span>${why}</li>`;
+  return `<li><span class="jv">${judgeLabel(i, judge)} ${verdictPill(v ? v.pass : null)}</span>${why}</li>`;
 }
 
 /**
@@ -101,7 +103,7 @@ function voteHtml(judge: string, v: Vote | null): string {
  */
 function outcomeHtml(o: Outcome, n: number, judges: string[]): string {
   const pass = o.pass ?? null;
-  const votes = judges.filter((j) => o.votes && j in o.votes).map((j) => voteHtml(j, o.votes[j] ?? null));
+  const votes = judges.flatMap((j, i) => (o.votes && j in o.votes ? [voteHtml(i, j, o.votes[j] ?? null)] : []));
   return (
     `<li class="${pass === null ? "na" : pass ? "ok" : "bad"}">` +
     `<div class="exp"><span class="n">${n}.</span> <span class="et">${esc(o.expectation)}</span> ${verdictPill(pass)}</div>` +

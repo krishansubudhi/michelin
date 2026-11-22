@@ -6,7 +6,7 @@
 
 import type { Game, Row } from "../run/compare.ts";
 import { metricNames, secs, type Measure } from "../run/measures.ts";
-import { esc, FOOTER_HTML, fmtUsd, TOPLINE_HTML } from "./html.ts";
+import { esc, FOOTER_HTML, fmtUsd, judgeTitle, TOPLINE_HTML } from "./html.ts";
 import { TAILWIND_CSS } from "./tailwind.gen.ts";
 
 /**
@@ -30,8 +30,8 @@ function named(g: Game, letter: string | null, aIs: "A" | "B"): string {
 function gameHtml(g: Game): string {
   const won = g.winner === null ? "no valid verdict" : g.winner === "tie" ? "tie" : g.winner === "a" ? g.a : g.b;
   const judges = Object.entries(g.judges).map(
-    ([m, v]) =>
-      `<li><b>${esc(m)}</b>: ${esc(v.result ?? "no result")}<ul>` +
+    ([m, v], i) =>
+      `<li><b>${esc(judgeTitle(i, m))}</b>: ${esc(v.result ?? "no result")}<ul>` +
       `<li>${esc(g.a)} shown as A: ${esc(named(g, v.ab, "A"))}. ${esc(v.whyAB)}</li>` +
       `<li>${esc(g.a)} shown as B: ${esc(named(g, v.ba, "B"))}. ${esc(v.whyBA)}</li></ul></li>`,
   );

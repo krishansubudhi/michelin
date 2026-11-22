@@ -40,6 +40,18 @@ export const fmtMs = (ms: number) => (ms >= 1000 ? `${(ms / 1000).toFixed(1)} s`
  * @param usd Dollars, e.g. 0.0123; null or undefined when unknown.
  * @returns   e.g. "$0.0123", or "—" when unknown.
  */
+/**
+ * A judge's display name, numbered so it doesn't read like a contestant. Pure.
+ *
+ * @param i    0-based judge index.
+ * @param name Judge model, e.g. "claude-opus-5-5-high".
+ * @returns    e.g. "Judge 1 (claude-opus-5-5 · high)".
+ */
+export function judgeTitle(i: number, name: string): string {
+  const m = name.match(/^(.*)-(low|medium|high|xhigh|max)$/i);
+  return `Judge ${i + 1} (${m ? `${m[1]} · ${m[2]}` : name})`;
+}
+
 export const fmtUsd = (usd: number | null | undefined) => (typeof usd === "number" ? `$${usd.toFixed(4)}` : "—");
 
 /**

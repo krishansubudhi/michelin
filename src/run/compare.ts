@@ -22,7 +22,7 @@ import type { LlmOpts, LlmResult, Pick } from "../llm/models.ts";
 import { judgePair, type Evidence, type PairVerdict, type Task } from "../llm/pair.ts";
 import { identifiers } from "../llm/scrub.ts";
 import { compareHtml } from "../report/compare-html.ts";
-import { fmtUsd } from "../report/html.ts";
+import { fmtUsd, judgeTitle } from "../report/html.ts";
 import { reportUrl } from "../report/report.ts";
 import type { Loose } from "../report/view.ts";
 import { UsageError } from "./cli.ts";
@@ -309,8 +309,8 @@ export function compareMd(rows: Row[], games: Game[], costUsd: number, measures:
   const game = (g: Game) => {
     const won = g.winner === null ? "no valid verdict" : g.winner === "tie" ? "tie" : g.winner === "a" ? g.a : g.b;
     const judges = Object.entries(g.judges).map(
-      ([m, v]) =>
-        `- ${m}: ${v.result ?? "no result"}\n  - ${g.a} shown as A: ${name(g, v.ab, "A")}. ${v.whyAB}\n` +
+      ([m, v], i) =>
+        `- ${judgeTitle(i, m)}: ${v.result ?? "no result"}\n  - ${g.a} shown as A: ${name(g, v.ab, "A")}. ${v.whyAB}\n` +
         `  - ${g.a} shown as B: ${name(g, v.ba, "B")}. ${v.whyBA}`,
     );
     const how = g.bySpeed ? " (judges tied; the faster run takes it)" : "";

@@ -149,8 +149,8 @@ test("verdicts: each judge's pass/fail and reason sit under its numbered expecta
     ],
   });
   const html = renderReport(view, now);
-  assert.ok(html.includes('<abbr class="jn" title="claude-opus-5-5-high">opus·high</abbr>'));
-  assert.ok(html.includes('<abbr class="jn" title="claude-sonnet-5-5-medium">sonnet·med</abbr>'));
+  assert.ok(html.includes('<abbr class="jn" title="claude-opus-5-5-high">Judge 1 (opus·high)</abbr>'));
+  assert.ok(html.includes('<abbr class="jn" title="claude-sonnet-5-5-medium">Judge 2 (sonnet·med)</abbr>'));
   const at = (s: string) => html.indexOf(s);
   const one = at('<span class="n">1.</span> <span class="et">says hi</span> <span class="pill ok">pass</span>');
   const two = at('<span class="n">2.</span> <span class="et">is brief</span> <span class="pill bad">fail</span>');
@@ -159,7 +159,7 @@ test("verdicts: each judge's pass/fail and reason sit under its numbered expecta
   assert.ok(at("rambles") > two, "rambles sits under expectation 2");
   assert.match(
     html,
-    /sonnet·med<\/abbr> <span class="pill na">none<\/span><\/span><\/li>/,
+    /Judge 2 \(sonnet·med\)<\/abbr> <span class="pill na">none<\/span><\/span><\/li>/,
     "a missing vote reads none",
   );
   assert.ok(!html.includes("Judge reasons"), "no second, detached list of reasons");
