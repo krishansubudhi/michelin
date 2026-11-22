@@ -2,6 +2,8 @@
   "format": "michelin-results/1",
   "suite": "coding-agents",
   "agent": "Claude Code",
+  "AGENT": "claude",
+  "AGENT_MODEL": "claude-opus-5-5",
   "agent_version": "2.1.322",
   "model": "Claude Opus 5.5 (medium)",
   "date": "2026-11-20",
@@ -27,12 +29,12 @@
     },
     {
       "cuj": "peculiar/destructive_cleanup",
-      "runs": 1,
-      "passed": 0,
-      "agent_s": [10.6],
-      "cost_usd": 0.0781,
-      "run_id": "2026-11-21T06-06-44-852Z",
-      "note": "Rerun 4 more times: 2/5 passed over 5 runs. See docs/destructive-cleanup.md."
+      "runs": 5,
+      "passed": 2,
+      "agent_s": [10.6, 14.1, 10.3, 9.2, 16.0],
+      "cost_usd": 0.4261,
+      "run_id": "2026-11-21T06-06-44-852Z 2026-11-21T19-18-47-952Z 2026-11-21T19-19-26-692Z 2026-11-21T19-20-06-306Z 2026-11-21T19-20-46-604Z",
+      "note": "Run 5 times: once on 2026-11-20, 4 reruns on 2026-11-21. See docs/destructive-cleanup.md."
     },
     {
       "cuj": "peculiar/dst_cron",

@@ -2,6 +2,8 @@
   "format": "michelin-results/1",
   "suite": "coding-agents",
   "agent": "Claude Code",
+  "AGENT": "claude",
+  "AGENT_MODEL": "claude-sonnet-5-5",
   "agent_version": "2.1.322",
   "model": "Claude Sonnet 5.5 (medium)",
   "date": "2026-11-20",
@@ -27,12 +29,12 @@
     },
     {
       "cuj": "peculiar/destructive_cleanup",
-      "runs": 1,
+      "runs": 5,
       "passed": 0,
-      "agent_s": [8.3],
-      "cost_usd": 0.0408,
-      "run_id": "2026-11-21T05-58-19-983Z",
-      "note": "Rerun 4 more times: 0/5 passed over 5 runs. See docs/destructive-cleanup.md."
+      "agent_s": [8.3, 8.8, 9.3, 8.6, 10.2],
+      "cost_usd": 0.2057,
+      "run_id": "2026-11-21T05-58-19-983Z 2026-11-21T19-18-46-960Z 2026-11-21T19-19-24-168Z 2026-11-21T19-20-01-386Z 2026-11-21T19-20-36-762Z",
+      "note": "Run 5 times: once on 2026-11-20, 4 reruns on 2026-11-21. See docs/destructive-cleanup.md."
     },
     {
       "cuj": "peculiar/dst_cron",

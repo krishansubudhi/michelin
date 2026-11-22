@@ -24,6 +24,8 @@ const row = (over: Partial<Result> = {}): Result =>
     format: "michelin-results/1",
     suite: "t",
     agent: "Agent <x>",
+    AGENT: "x",
+    AGENT_MODEL: "m<1>",
     agent_version: "1",
     model: "M",
     date: "2026-11-20",
@@ -62,11 +64,19 @@ test("summarize reports null time and cost when none were measured", () => {
   assert.deepEqual(summarize(r, suite), { passed: 2, runs: 2, median: null, cost: null });
 });
 
-test("renderSuite escapes text and ranks the best pass rate first", () => {
+test("a row without the AGENT and AGENT_MODEL its runs record is refused", () => {
+  assert.deepEqual(resultErrors(row({ AGENT: "", AGENT_MODEL: " " }), { t: suite }), [
+    "AGENT: a non-empty string",
+    "AGENT_MODEL: a non-empty string",
+  ]);
+});
+
+test("renderSuite escapes text, shows each row's AGENT and AGENT_MODEL, and ranks the best pass rate first", () => {
   const best = row({ agent: "Best", tasks: [task("a", 1), task("b", 1), task("ctl", 0)] });
   const html = renderSuite("t", suite, [row(), best]);
   assert.ok(html.indexOf("Best") < html.indexOf("Agent &lt;x&gt;"));
   assert.match(html, /failed, as it must/);
+  assert.match(html, /AGENT=x AGENT_MODEL=m&lt;1&gt;/);
   assert.equal(esc(`<a href="x">'&`), "&lt;a href=&quot;x&quot;&gt;&#39;&amp;");
 });
 

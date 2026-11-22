@@ -24,12 +24,23 @@ export type Task = {
   cost_usd: number | null;
   note?: string;
 };
-type Text = "suite" | "agent" | "agent_version" | "model" | "date" | "submitted_by" | "reproduce";
+type Text =
+  "suite" | "agent" | "AGENT" | "AGENT_MODEL" | "agent_version" | "model" | "date" | "submitted_by" | "reproduce";
 /** One results file: one agent and model on one suite. */
 export type Result = Record<Text, string> & { evidence: string[]; notes?: string; tasks: Task[] };
 
 const REPO = "https://github.com/krishansubudhi/michelin";
-const TEXT: Text[] = ["suite", "agent", "agent_version", "model", "date", "submitted_by", "reproduce"];
+const TEXT: Text[] = [
+  "suite",
+  "agent",
+  "AGENT",
+  "AGENT_MODEL",
+  "agent_version",
+  "model",
+  "date",
+  "submitted_by",
+  "reproduce",
+];
 const na = (x: number | null, f: (x: number) => string) => (x === null ? "n/a" : f(x));
 
 /** Lists what is wrong with a task, e.g. {cuj, runs: 1, passed: 1, agent_s: [8.1], cost_usd: 0.04}. @param t the task @param control it must fail @returns problems; [] when valid */
@@ -105,7 +116,7 @@ export function renderSuite(id: string, suite: Suite, rows: Result[]): string {
     const pct = `<b>${s.passed}/${s.runs}</b> <span class="pct">${Math.round(rate(s) * 100)}%</span>`;
     return `<tbody data-rate="${rate(s)}" data-time="${s.median ?? ""}" data-cost="${s.cost ?? ""}" id="${id}-${i + 1}">
 <tr><td><button class="open" aria-expanded="false">${esc(r.agent)} <span class="v">${esc(r.agent_version)}</span></button>
-<div class="m">${esc(r.model)}</div></td><td class="model">${esc(r.model)}</td><td>${pct}</td><td>${na(s.median, (m) => `${m.toFixed(1)} s`)}</td>
+<div class="m">${esc(r.model)}</div><div class="env">AGENT=${esc(r.AGENT)} AGENT_MODEL=${esc(r.AGENT_MODEL)}</div></td><td class="model">${esc(r.model)}</td><td>${pct}</td><td>${na(s.median, (m) => `${m.toFixed(1)} s`)}</td>
 <td>${na(s.cost, (c) => `$${c.toFixed(2)}`)}</td><td class="date">${esc(r.date)}</td></tr>${detailRow(r, suite)}</tbody>`;
   });
   return `<section class="suite" id="${id}"><h3>${esc(suite.title)}</h3><p>${esc(suite.about)}

@@ -8,19 +8,21 @@ To propose a new suite, add it to `suites.json` in the same pull request as its 
 
 ## Format
 
-| Field           | Type             | Meaning                                                                        |
-| --------------- | ---------------- | ------------------------------------------------------------------------------ |
-| `format`        | string           | always `"michelin-results/1"`                                                  |
-| `suite`         | string           | a key of `suites.json`, e.g. `"coding-agents"`                                 |
-| `agent`         | string           | the harness under test, e.g. `"Claude Code"`, `"OpenCode"`                     |
-| `agent_version` | string           | its version, e.g. `"2.1.322"`                                                  |
-| `model`         | string           | the model behind it, with effort or quantisation, e.g. `"Qwen 3.8 27B, local"` |
-| `date`          | string           | `YYYY-MM-DD` of the runs                                                       |
-| `submitted_by`  | string           | your GitHub handle                                                             |
-| `reproduce`     | string           | the command, after the suite's `setup` line, that reruns this row              |
-| `evidence`      | string[]         | links (or repo paths) to the `report.html` / `verdict.json` files behind it    |
-| `notes`         | string, optional | anything a reader needs: unequal settings, reruns, setup faults                |
-| `tasks`         | object[]         | one entry per CUJ of the suite, below                                          |
+| Field           | Type             | Meaning                                                                          |
+| --------------- | ---------------- | -------------------------------------------------------------------------------- |
+| `format`        | string           | always `"michelin-results/1"`                                                    |
+| `suite`         | string           | a key of `suites.json`, e.g. `"coding-agents"`                                   |
+| `agent`         | string           | the harness under test, e.g. `"Claude Code"`, `"OpenCode"`                       |
+| `AGENT`         | string           | the run's `AGENT` as run.json records it, e.g. `"agy"`; rows are recounted by it |
+| `AGENT_MODEL`   | string           | the run's `AGENT_MODEL` as run.json records it, e.g. `"claude-opus-5-5-medium"`  |
+| `agent_version` | string           | its version, e.g. `"2.1.322"`                                                    |
+| `model`         | string           | the model behind it, with effort or quantisation, e.g. `"Qwen 3.8 27B, local"`   |
+| `date`          | string           | `YYYY-MM-DD` of the runs                                                         |
+| `submitted_by`  | string           | your GitHub handle                                                               |
+| `reproduce`     | string           | the command, after the suite's `setup` line, that reruns this row                |
+| `evidence`      | string[]         | links (or repo paths) to the `report.html` / `verdict.json` files behind it      |
+| `notes`         | string, optional | anything a reader needs: unequal settings, reruns, setup faults                  |
+| `tasks`         | object[]         | one entry per CUJ of the suite, below                                            |
 
 Each task:
 
