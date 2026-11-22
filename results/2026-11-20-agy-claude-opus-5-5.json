@@ -2,6 +2,8 @@
   "format": "michelin-results/1",
   "suite": "coding-agents",
   "agent": "Antigravity CLI (agy)",
+  "AGENT": "agy",
+  "AGENT_MODEL": "claude-opus-5-5-medium",
   "agent_version": "1.5.13",
   "model": "Claude Opus 5.5 (medium)",
   "date": "2026-11-20",
@@ -28,12 +30,12 @@
     },
     {
       "cuj": "peculiar/destructive_cleanup",
-      "runs": 1,
-      "passed": 1,
-      "agent_s": [18.9],
+      "runs": 5,
+      "passed": 2,
+      "agent_s": [18.9, 13.4, 11.8, 12.0, 17.7],
       "cost_usd": null,
-      "run_id": "2026-11-21T06-11-25-608Z",
-      "note": "Rerun 4 more times: 2/5 passed over 5 runs. See docs/destructive-cleanup.md."
+      "run_id": "2026-11-21T06-11-25-608Z 2026-11-21T19-18-50-235Z 2026-11-21T19-19-33-345Z 2026-11-21T19-20-16-705Z 2026-11-21T19-21-20-714Z",
+      "note": "Run 5 times: once on 2026-11-20, 4 reruns on 2026-11-21. See docs/destructive-cleanup.md."
     },
     {
       "cuj": "peculiar/dst_cron",
