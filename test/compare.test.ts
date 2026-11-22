@@ -9,6 +9,7 @@ import { join } from "node:path";
 import {
   compareMain,
   loadSide,
+  runDirs,
   parseRunArg,
   roundRobin,
   speedBreak,
@@ -123,6 +124,13 @@ test("loadSide: comma-separated run folders are one side, their CUJs merged", ()
   renameSync(join(b, "math-add"), join(b, "math-sub"));
   writeFileSync(join(b, "run.json"), readFileSync(join(b, "run.json"), "utf8").replaceAll("math-add", "math-sub"));
   assert.deepEqual(Object.keys(loadSide(`${a},${b}`, "m").cujs).sort(), ["math-add", "math-sub"]);
+});
+
+test("runDirs: a run folder stays; a command's folder becomes its per-CUJ run folders", () => {
+  const root = mkdtempSync(join(tmpdir(), "cmp-"));
+  const a = fakeRun(root, "math-add", "m1", "13");
+  assert.deepEqual(runDirs(a), [a]);
+  assert.deepEqual(runDirs(root), [a]);
 });
 
 test("loadSide: evidence, instruction, expectations and every identifier to hide", () => {

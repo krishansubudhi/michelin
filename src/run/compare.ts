@@ -187,6 +187,14 @@ export function loadSide(dir: string, name: string, hide: string[] = []): Side {
   return { name, dir, ids, cujs };
 }
 
+/** A run folder as [dir]; a command's folder (one run folder per CUJ, runner.ts runOnce) as its subfolders with run.json. */
+export const runDirs = (dir: string) =>
+  existsSync(join(dir, "run.json"))
+    ? [dir]
+    : readdirSync(dir, { withFileTypes: true })
+        .filter((e) => e.isDirectory() && existsSync(join(dir, e.name, "run.json")))
+        .map((e) => join(dir, e.name));
+
 /**
  * Name every run: its given name, else its subject's folder name, with "#<n>" (1-based position) where that clashes.
  *
@@ -200,7 +208,7 @@ function nameRuns(args: string[], cwd: string): [string, string][] {
     const { name, dir } = parseRunArg(a);
     const abs = dir
       .split(",")
-      .map((d) => resolve(cwd, d))
+      .flatMap((d) => runDirs(resolve(cwd, d)))
       .join(",");
     const subject = readJson(join(abs.split(",")[0], "run.json"))?.subject;
     return { name, dir: abs, auto: basename(typeof subject === "string" ? subject : abs) };

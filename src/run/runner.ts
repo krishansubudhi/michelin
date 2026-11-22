@@ -21,8 +21,8 @@
 //   llm.log                     a timestamped line per step (run start, role, model start/end, errors), every CLI stderr line, and stdout when a call fails
 
 import { setupReport } from "./setup-report.ts";
-import { readFileSync, writeFileSync, mkdirSync, appendFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { readFileSync, writeFileSync, mkdirSync, appendFileSync, existsSync } from "node:fs";
+import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadConfig, type Settings } from "./settings.ts";
 import { agentFromEnv, type Agent } from "./agent.ts";
@@ -318,16 +318,23 @@ export async function runSubject(ctx: Ctx, subject: string, cujs: (readonly [str
 }
 
 /**
- * One run: make .runs/<runid>/ and its scratch folder, run the subject on `cujs`, print the run folder, statuses
- * and report path.
+ * One run: make <parent>/<cuj-id>/ (-2, -3 ... on a repeat) and its scratch folder, run the subject on `cujs`, print
+ * the run folder, statuses and report path.
  *
+ * @param parent   This command's folder, e.g. ".runs/2026-11-22T22-40-00-000Z"; every CUJ's run is a subfolder.
  * @param subject  Subject folder, e.g. "subjects/toy".
  * @param settings Models per role.
  * @param cujs     [path, cuj] pairs for this run, in order.
  * @returns        The final run.json contents.
  */
-async function runOnce(subject: string, settings: Settings, cujs: (readonly [string, Cuj])[]): Promise<Run> {
-  const dir = join(".runs", new Date().toISOString().replace(/[:.]/g, "-"));
+async function runOnce(
+  parent: string,
+  subject: string,
+  settings: Settings,
+  cujs: (readonly [string, Cuj])[],
+): Promise<Run> {
+  let dir = join(parent, cujId(cujs[0][0]));
+  for (let n = 2; existsSync(dir); n++) dir = join(parent, `${cujId(cujs[0][0])}-${n}`);
   mkdirSync(dir, { recursive: true });
   console.log(runDirLine(dir));
   const read = (f: string) => readFileSync(join(subject, f), "utf8");
@@ -340,7 +347,7 @@ async function runOnce(subject: string, settings: Settings, cujs: (readonly [str
     log(`end ${m.model}/${m.effort} ${r.ms}ms${r.error ? ` error: ${r.error}` : ""}`);
     return r;
   };
-  const scratch = scratchFor(dir);
+  const scratch = scratchFor(`${basename(parent)}-${basename(dir)}`);
   makeScratch(scratch);
   const ctx = {
     settings,
@@ -378,7 +385,9 @@ async function main() {
   const runs: Run[] = [];
   const release = await acquireRunLock(lockFor(subject)); // one run per subject: setup may pick ports by scanning (runlock.ts)
   try {
-    for (let i = 0; i < times; i++) for (const group of groups) runs.push(await runOnce(subject, settings, group));
+    const parent = join(".runs", new Date().toISOString().replace(/[:.]/g, "-")); // one folder per command
+    for (let i = 0; i < times; i++)
+      for (const group of groups) runs.push(await runOnce(parent, subject, settings, group));
   } finally {
     release();
   }
