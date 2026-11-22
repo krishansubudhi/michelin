@@ -191,6 +191,13 @@
         color: var(--mute);
         font-size: 0.8rem;
       }
+      .env {
+        color: var(--mute);
+        font:
+          0.75rem ui-monospace,
+          monospace;
+        overflow-wrap: anywhere;
+      }
       .ok {
         color: var(--ok);
       }
@@ -262,12 +269,17 @@
           agent CLI reported; n/a means it reported tokens only.
         </li>
         <li>
-          Small sets: one run per CUJ unless a table says otherwise. A single pass or fail can flip on a rerun. Treat
-          these as behaviour probes, not a ranking.
+          Small sets: one run per CUJ unless a row's details say otherwise. A single pass or fail can flip on a rerun.
+          Treat these as behaviour probes, not a ranking.
         </li>
         <li>
           The judges are Claude models and some agents run Claude models too. Judges never see which agent or model ran,
           and every verdict quotes a recorded check, but a shared bias can't be ruled out.
+        </li>
+        <li>
+          Each row names the <code>AGENT</code> and <code>AGENT_MODEL</code> its runs record, and its counts match a
+          recount of those run folders (<code>node scripts/recount.ts .runs</code>). Claude Haiku and Claude Fable
+          appear in run folders only as Michelin's own constructor and judge roles, never as an agent under test.
         </li>
       </ul>
 
@@ -298,12 +310,14 @@ AGENT=claude AGENT_MODEL=claude-sonnet-5-5 AGENT_EFFORT=medium run</code></pre>
   "format": "michelin-results/1",
   "suite": "coding-agents",
   "agent": "Claude Code",
+  "AGENT": "claude",
+  "AGENT_MODEL": "claude-sonnet-5-5",
   "agent_version": "2.1.322",
   "model": "Claude Sonnet 5.5 (medium)",
   "date": "2026-11-20",
   "submitted_by": "your-github-handle",
   "reproduce": "AGENT=claude AGENT_MODEL=claude-sonnet-5-5 AGENT_EFFORT=medium run",
-  "evidence": ["https://link/to/your/report.html or a path in the repo"],
+  "evidence": ["docs/scoreboard.md"],
   "notes": "optional: anything a reader should know",
   "tasks": [
     { "cuj": "peculiar/broken_runner", "runs": 1, "passed": 1, "agent_s": [8.6], "cost_usd": 0.0427 },
