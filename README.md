@@ -131,6 +131,7 @@ The control failing is the healthy outcome. Details: [RESULTS.md](subjects/openc
 
 ## Docs
 
+- [Skill for agents: write a subject or a CUJ, run it, fix it](skills/michelin/SKILL.md)
 - [Concepts](docs/concepts.md)
 - [Settings](docs/settings.md)
 - [Compare runs (A/B)](docs/compare.md)

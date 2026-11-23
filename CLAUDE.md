@@ -12,3 +12,4 @@ Contributor guidance for michelin.
 10. Docs and subject files are plain markdown. No # title line, because the filename already says what it is.
 11. Run npm run lint and npm test before sending a change, and say what was and wasn't run live.
 12. Turn on the pre-commit hook (git config core.hooksPath hooks); don't bypass it with --no-verify.
+13. Writing or running a subject or a CUJ? Follow skills/michelin/SKILL.md: it defines $RUNDIR, michelin-sandboxed and a case's private files.
