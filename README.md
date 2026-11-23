@@ -70,7 +70,17 @@ A subject is a folder of three plain-English files the LLM roles follow:
 - `howtorun.md`: how to talk to it (a command, a URL, a chat).
 - `teardown.md`: what to stop and delete afterwards.
 
-Every CUJ gets its own setup, teardown and scratch folder, given to every role as `$RUNDIR`. Ready-made subjects for Claude Code (`subjects/claude_code`) and agy (`subjects/agy`) pair with three quick checks in `cujs/sanity/`: `michelin subjects/claude_code cujs/sanity/`.
+Every CUJ gets its own setup, teardown and scratch folder, given to every role as `$RUNDIR`. Ready-made subjects for Claude Code (`subjects/claude_code`) and agy (`subjects/agy`) pair with four quick checks in `cujs/sanity/`: `michelin subjects/claude_code cujs/sanity/`.
+
+### Keep the agent away from the answers
+
+A case's files, its data and old results all sit in the michelin folder, on the same machine as the agent. Start the agent through `michelin-sandboxed` and it cannot read or write the michelin folder, other runs' folders, or `$RUNDIR/.check`:
+
+```
+cd $RUNDIR && michelin-sandboxed your-agent "MESSAGE"
+```
+
+Wrap the command that **starts** the agent: for a one-shot CLI that is the line in `howtorun.md`, for a server it is the start line in `setup.md`. Never wrap a case's own helpers. It uses `sandbox-exec` on macOS and `bwrap` on Linux (the Linux path is not tested yet); with neither it warns and runs unwalled. In `cujs/sanity/`, `p_` cases must pass and `f_` cases must fail. `f_sandbox.yaml` asks the agent for two hidden codes and must fail 0/2: a pass means the agent runs unwalled.
 
 A CUJ is a yaml file in `<subject>/cujs/`:
 

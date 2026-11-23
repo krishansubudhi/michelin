@@ -1,0 +1,46 @@
+#!/bin/bash
+# michelin-sandboxed <command...>: run the agent under test behind a wall.
+#
+# Start it from the run folder ($RUNDIR). The command, and everything it starts, cannot read or write:
+#   1. the michelin folder (case files, their data, old results) and $MICHELIN_SUBJECTS when set
+#   2. other runs' folders (the run folder's neighbours, when its parent is named "runs")
+#   3. the run folder's own .check/ (the harness's private notes)
+# The rest of the machine stays as it is, so the agent keeps its program and its login.
+# Wrap the command that STARTS the agent: a sandbox cannot be put on a process that is already running.
+# Never wrap a case's own helpers (they read their data from the michelin folder).
+#
+# macOS: sandbox-exec. Linux: bwrap (bubblewrap). Neither found: a loud warning, then the command runs unwalled;
+# cujs/sanity/sandbox_holds.yaml tells you whether the wall is up.
+#
+# Try it: cd /tmp && michelin-sandboxed head -1 <michelin folder>/README.md   -> "Operation not permitted"
+set -u
+[ $# -gt 0 ] || { echo "usage: michelin-sandboxed <command...>" >&2; exit 2; }
+self=$0
+while [ -L "$self" ]; do
+  link=$(readlink "$self")
+  case $link in /*) self=$link ;; *) self=$(dirname "$self")/$link ;; esac
+done
+repo=$(cd "$(dirname "$self")/.." && pwd -P)
+run=$(pwd -P)
+hide=("$repo")
+[ -n "${MICHELIN_SUBJECTS:-}" ] && [ -d "$MICHELIN_SUBJECTS" ] && hide+=("$(cd "$MICHELIN_SUBJECTS" && pwd -P)")
+runs=""
+[ "$(basename "$(dirname "$run")")" = runs ] && runs=$(dirname "$run")
+
+if command -v sandbox-exec >/dev/null 2>&1; then
+  p="(version 1)(allow default)"
+  for d in "${hide[@]}"; do p="$p(deny file-read* file-write* (subpath \"$d\"))"; done
+  if [ -n "$runs" ]; then
+    p="$p(deny file-read-data file-write* (subpath \"$runs\"))(allow file-read* file-read-data file-write* (subpath \"$run\"))"
+  fi
+  p="$p(deny file-read* file-read-data file-write* (subpath \"$run/.check\"))"
+  exec sandbox-exec -p "$p" "$@"
+elif command -v bwrap >/dev/null 2>&1; then
+  a=(--dev-bind / /)
+  for d in "${hide[@]}"; do a+=(--tmpfs "$d"); done
+  [ -n "$runs" ] && a+=(--tmpfs "$runs" --bind "$run" "$run")
+  [ -d "$run/.check" ] && a+=(--tmpfs "$run/.check")
+  exec bwrap "${a[@]}" --chdir "$run" "$@"
+fi
+echo "michelin-sandboxed: WARNING: no sandbox-exec or bwrap here, running WITHOUT a wall: $*" >&2
+exec "$@"

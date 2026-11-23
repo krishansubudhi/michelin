@@ -29,7 +29,8 @@
     "subjects/toy"
   ],
   "bin": {
-    "michelin": "bin/michelin.js"
+    "michelin": "bin/michelin.js",
+    "michelin-sandboxed": "bin/michelin-sandboxed"
   },
   "scripts": {
     "test": "node --test test/*.test.ts",
