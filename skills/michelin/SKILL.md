@@ -1,6 +1,6 @@
 ---
 name: michelin
-description: Evaluate an agent or program end to end with Michelin (npm michelin-eval): write a new subject or CUJ yaml files ($RUNDIR, michelin-sandboxed, needs), run them, read report.html, find the root cause of a failure, fix and rerun, and A/B two versions with michelin compare. Use when asked to eval, test or compare an agent on real user journeys.
+description: Evaluate an agent or program end to end with Michelin (npm michelin-eval): write a new subject or CUJ yaml files ($RUNDIR, michelin-sandboxed), run them, read report.html, find the root cause of a failure, fix and rerun, and A/B two versions with michelin compare. Use when asked to eval, test or compare an agent on real user journeys.
 ---
 
 # Michelin
@@ -20,30 +20,18 @@ michelin run                                     # toy-country passes; toy-name,
 
 ## Words
 
-- **Michelin folder**: the folder you run `michelin` from (the repo root, or where `michelin.json` is). The executor
-  is told its path. Relative paths in `howtorun.md` and in a CUJ start there.
 - **Subject**: the program under test, as a folder of three markdown files (`setup.md`, `howtorun.md`,
   `teardown.md`) plus any helper scripts.
 - **CUJ**: one journey, one yaml file: what to do and what must be true afterwards. Also called a case.
-- **Roles**: the constructor follows setup, the executor plays the user, the destructor follows teardown, the judges
-  score. The agent under test is none of these. It only sees what the executor sends it.
 - **`$RUNDIR`**: this CUJ's own scratch folder. Empty at setup, deleted after teardown. The agent works in it, and
   everything a subject or a case creates goes in it. Every role is told its real path.
-- **`$RUNDIR/.check`**: the case's private corner of `$RUNDIR`, for what the agent must not see or touch (pid files
-  of servers the case started, hidden answers). The sandbox hides it from the agent.
-- **DATA**: a case's own files (a fake website, a template), kept in the michelin folder at
-  `<cujs folder>/<suite>/data/<case>/`. The executor runs them from there. They are never copied into `$RUNDIR`,
-  because the answer is usually in them.
 - **`michelin-sandboxed`**: a wrapper for the command that starts the agent. Inside it the agent cannot read or
-  write the michelin folder, `$MICHELIN_SUBJECTS`, other runs' folders or `$RUNDIR/.check`. Its own `$RUNDIR` stays
-  open. Without it the agent can read the case file and the expectations.
-- **Needs**: what a suite asks of every subject. `<cujs folder>/needs.md` lists them as `## Name` headings, and a
-  subject answers each with the same heading in `howtorun.md`. A CUJ whose need is unanswered is skipped as
-  `unsupported`.
-- **Given**: state that is true before the CUJ starts (`given: {memory: [...]}`). Setup seeds it into the program.
-  The executor and the judges are told it, the program never is.
-- **Must-fail control**: a CUJ the program handles, with expectations that are wrong on purpose. If it passes, the
-  judges are rubber-stamping.
+  write the michelin folder (the one you run `michelin` from), other runs' folders or `$RUNDIR/.check`. Its own
+  `$RUNDIR` stays open. Without it the agent can read the case file and the expectations.
+- **A case's private files**: what the agent must never see. Two places, both behind the sandbox. DATA is the
+  case's own folder in the michelin folder, `<cujs folder>/<suite>/data/<case>/` (a fake website, a template): the
+  executor runs it from there and never copies it into `$RUNDIR`. `$RUNDIR/.check` is for what a run makes (pid
+  files of servers the case started, hidden codes).
 
 ## Write a subject
 
@@ -69,8 +57,9 @@ Plain markdown, no `#` title line, in `subjects/<name>/`. Copy `subjects/claude_
 A CUJ for one subject goes in `subjects/<name>/cujs/`. A suite any agent can take goes in `cujs/<suite>/` and runs
 against any subject: `michelin run subjects/claude_code cujs/sanity/`.
 
-Keys: `instruction`, `timeout_s` and `expectations` are required. `story` (a note for humans), `given` and `needs`
-(names from `needs.md`) are optional. Any other key is an error.
+Keys: `instruction`, `timeout_s` and `expectations` are required. `story` (a note for humans), `given` (state setup seeds
+before the CUJ starts, never told to the program) and `needs` (names from `<cujs folder>/needs.md` that a subject
+answers with the same `##` heading in `howtorun.md`) are optional. Any other key is an error.
 
 ```yaml
 story: The user asks for the default country.
@@ -94,7 +83,8 @@ expectations:
 5. Write each expectation in plain words, so a judge can decide it from the recorded output alone. One fact per
    expectation. Only the judges read expectations.
 6. Write the message as a real person would. No hints, no names of the route you hope the agent finds.
-7. Add a must-fail control to every new suite.
+7. Add a must-fail control to every new suite: a case the program handles, with expectations wrong on purpose. If it
+   passes, the judges are rubber-stamping.
 
 A full example with a server and hidden data: `cujs/personal-agents/krishan_hard1/tool_broken_find_route.yaml`.
 
