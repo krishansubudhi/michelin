@@ -49,7 +49,7 @@ total: 1/2 CUJs passed
 
 ## Where to go next
 
-- **Write your own subject and CUJs, run them, fix failures:** [the skill](skills/michelin/SKILL.md). Hand it to your coding agent: `mkdir -p ~/.claude/skills && cp -r "$(npm root -g)/michelin-eval/skills/michelin" ~/.claude/skills/`
+- **Write your own subject and CUJs, run them, fix failures:** [the skill](skills/michelin/SKILL.md), one plain markdown file. Any coding agent: tell it to read `$(npm root -g)/michelin-eval/skills/michelin/SKILL.md` first. Claude Code can load it by itself: `mkdir -p ~/.claude/skills && cp -r "$(npm root -g)/michelin-eval/skills/michelin" ~/.claude/skills/`
 - **Keep the agent away from the answers** (`michelin-sandboxed`): [the skill](skills/michelin/SKILL.md#words)
 - **Ready-made subjects and quick checks:** `michelin subjects/claude_code cujs/sanity/` (also `subjects/agy`; `p_` cases must pass, `f_` cases must fail)
 - **Compare two runs, blind (A/B):** [docs/compare.md](docs/compare.md)
