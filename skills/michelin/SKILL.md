@@ -1,6 +1,6 @@
 ---
 name: michelin
-description: Evaluate an agent or program end to end with Michelin (npm michelin-eval): write a new subject or CUJ yaml files ($RUNDIR, michelin-sandboxed), run them, read report.html, find the root cause of a failure, fix and rerun, and A/B two versions with michelin compare. Use when asked to eval, test or compare an agent on real user journeys.
+description: "Evaluate an agent or program end to end with Michelin (npm michelin-eval): write a new subject or CUJ yaml files ($RUNDIR, michelin-sandboxed), run them, read report.html, find the root cause of a failure, fix and rerun, and A/B two versions with michelin compare. Use when asked to eval, test or compare an agent on real user journeys."
 ---
 
 # Michelin
