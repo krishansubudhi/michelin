@@ -47,6 +47,7 @@ Each command prints its own flags and an example: `michelin run --help`, `michel
 
 - `MICHELIN_SUBJECTS`: colon-separated folders. A subject, CUJ or `--settings` path that does not exist as given is looked up under each, e.g. `MICHELIN_SUBJECTS=~/my-subjects michelin my-app my-app/cujs/smoke/`.
 - `MICHELIN_TMP`: the folder for the run lock and scratch space, instead of the per-user `<os temp>/michelin-<user>` (e.g. `/tmp/michelin-agent`). Only one michelin runs at a time per lock folder; to hold one lock across OS users, point every user's `MICHELIN_TMP` at one shared folder made `chmod 1777`.
+- `MICHELIN_SANDBOX_HIDE`: colon-separated folders that `michelin-sandboxed` also hides from the agent under test, on top of the michelin folder, `MICHELIN_SUBJECTS` and `$RUNDIR/.check`, e.g. `MICHELIN_SANDBOX_HIDE=~/answers:~/notes`.
 
 A subject can read its own environment variables in setup.md. Every role inherits the environment michelin runs in, so export them before `michelin run`. The toy subject reads `TOY_VARIANT`: `v1` (the default) answers, `v2` is a broken build, for trying an A/B ([compare.md](compare.md)). The OpenCode subject (`subjects/opencode`) reads:
 

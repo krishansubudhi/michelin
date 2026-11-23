@@ -26,7 +26,8 @@ michelin run                                     # toy-country passes; toy-name,
 - **`$RUNDIR`**: this CUJ's own scratch folder. Empty at setup, deleted after teardown. The agent works in it, and
   everything a subject or a case creates goes in it. Every role is told its real path.
 - **`michelin-sandboxed`**: a wrapper for the command that starts the agent. Inside it the agent has no access to the
-  michelin folder and `$RUNDIR/.check`. Anything the agent must not see goes in one of those two. It uses
+  michelin folder and `$RUNDIR/.check`. Anything the agent must not see goes in one of those two. Hide more folders with the
+  setting `MICHELIN_SANDBOX_HIDE=dir1:dir2`. It uses
   `sandbox-exec` on macOS and `bwrap` on Linux (the Linux path is not tested yet); with neither it warns and runs
   unwalled.
 
