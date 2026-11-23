@@ -25,23 +25,10 @@ michelin run                                     # toy-country passes; toy-name,
 - **CUJ**: one journey, one yaml file: what to do and what must be true afterwards. Also called a case.
 - **`$RUNDIR`**: this CUJ's own scratch folder. Empty at setup, deleted after teardown. The agent works in it, and
   everything a subject or a case creates goes in it. Every role is told its real path.
-- **`michelin-sandboxed`**: a wrapper for the command that starts the agent. Inside it the agent cannot read or
-  write the michelin folder (the one you run `michelin` from), other runs' folders or `$RUNDIR/.check`. Its own
-  `$RUNDIR` stays open. Without it the agent can read the case file and the expectations. It uses `sandbox-exec` on macOS and
-  `bwrap` on Linux (the Linux path is not tested yet); with neither it warns and runs unwalled.
-- **Hidden from the agent**: two folders the sandbox blocks.
-  - **The case's own folder.** A case that needs extra files, such as a fake website, keeps them in a folder named
-    after the case, inside `data/` beside its yaml. The answer is usually in them, so the executor runs them from
-    there and never copies them into `$RUNDIR`.
-
-    ```
-    cujs/personal-agents/krishan_hard1/
-      stuck_goal_one_new_approach.yaml        the case
-      data/stuck_goal_one_new_approach/       its files: acme_site.py, pricing.html, ...
-    ```
-
-  - **`$RUNDIR/.check`.** Files made during a run that the agent must not touch, such as the fake website's pid
-    file, so teardown can stop it.
+- **`michelin-sandboxed`**: a wrapper for the command that starts the agent. Inside it the agent has no access to the
+  michelin folder and `$RUNDIR/.check`. Anything the agent must not see goes in one of those two. It uses
+  `sandbox-exec` on macOS and `bwrap` on Linux (the Linux path is not tested yet); with neither it warns and runs
+  unwalled.
 
 ## Write a subject
 
