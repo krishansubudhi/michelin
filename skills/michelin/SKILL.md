@@ -41,8 +41,9 @@ Anything the agent must not see goes in one of the first two. To hide more folde
 { "sandbox_hide": ["~/answers", "/srv/notes"] }
 ```
 
-Everything else stays open to the agent: its home folder, the network, the rest of the machine. The sandbox keeps
-answers away from the agent. It does not protect your machine from the agent.
+Everything else stays open to the agent: its home folder, the network, the rest of the machine. So do not run
+`michelin` from your home folder: it is never hidden, because the agent's login lives there. The sandbox blocks
+files only. It keeps answers out of the agent's reach; it does not protect your machine from the agent.
 
 It uses `sandbox-exec` on macOS and `bwrap` on Linux (the Linux path is not tested yet). With neither it warns and
 runs with no sandbox.

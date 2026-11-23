@@ -153,6 +153,7 @@ test("pair_judges: default 1, else michelin.json's whole number", () => {
 test("sandboxHideEnv: the project folder, then sandbox_hide as absolute paths, then what the variable held", () => {
   assert.equal(sandboxHideEnv([], "/home/me", "/home/me", undefined), "", "the home folder is never hidden");
   assert.equal(sandboxHideEnv([], "/work/evals", "/home/me", ""), "/work/evals");
+  assert.equal(sandboxHideEnv(["/x"], "/work/evals", "/home/me", "/work/evals:/x"), "/work/evals:/x", "no repeats");
   assert.equal(
     sandboxHideEnv(["~/answers", "/srv/notes", "notes"], "/work/evals", "/home/me", "/a:/b"),
     "/work/evals:/home/me/answers:/srv/notes:/work/evals/notes:/a:/b",

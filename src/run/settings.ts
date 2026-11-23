@@ -232,9 +232,8 @@ export function resolveSettings(defaults: Settings, file: unknown, flags: Flags,
  */
 export function sandboxHideEnv(dirs: string[], cwd: string, home: string, env: string | undefined): string {
   const abs = dirs.map((d) => (d === "~" || d.startsWith("~/") ? join(home, d.slice(1)) : resolve(cwd, d)));
-  return [...(resolve(cwd) === resolve(home) ? [] : [resolve(cwd)]), ...abs, ...(env ?? "").split(":")]
-    .filter(Boolean)
-    .join(":");
+  const all = [...(resolve(cwd) === resolve(home) ? [] : [resolve(cwd)]), ...abs, ...(env ?? "").split(":")];
+  return [...new Set(all.filter(Boolean))].join(":"); // a Set: loadConfig may run twice in one process
 }
 
 /**

@@ -25,23 +25,40 @@ repo=$(cd "$(dirname "$self")/.." && pwd -P)
 run=$(pwd -P)
 hide=("$repo")
 IFS=: read -ra more <<< "${MICHELIN_SUBJECTS:-}:${MICHELIN_SANDBOX_HIDE:-}"
-for d in ${more[@]+"${more[@]}"}; do [ -d "$d" ] && hide+=("$(cd "$d" && pwd -P)"); done
+for d in ${more[@]+"${more[@]}"}; do
+  [ -n "$d" ] || continue
+  [ -d "$d" ] || { echo "michelin-sandboxed: WARNING: not hidden, no such folder: $d" >&2; continue; }
+  hide+=("$(cd "$d" && pwd -P)")
+done
 runs=""
 [ "$(basename "$(dirname "$run")")" = runs ] && runs=$(dirname "$run")
+# A hidden folder that holds the run folder (MICHELIN_TMP inside the project) is hidden around it: the run folder stays open.
+inside=""
+for d in "${hide[@]}" "$run"; do
+  case $d in *\"* | *\\*) echo "michelin-sandboxed: a folder name with a quote or backslash cannot be hidden: $d" >&2; exit 2 ;; esac
+  case $run/ in "$d"/*) [ "$d" != "$run" ] && inside=1 ;; esac
+done
+unset MICHELIN_SANDBOX_HIDE MICHELIN_SUBJECTS # the agent has no use for the list of what is hidden
 
 if command -v sandbox-exec >/dev/null 2>&1; then
   p="(version 1)(allow default)"
-  for d in "${hide[@]}"; do p="$p(deny file-read* file-write* (subpath \"$d\"))"; done
-  if [ -n "$runs" ]; then
-    p="$p(deny file-read-data file-write* (subpath \"$runs\"))(allow file-read* file-read-data file-write* (subpath \"$run\"))"
-  fi
+  for d in "${hide[@]}"; do
+    case $run/ in
+      "$d"/*) p="$p(deny file-read-data file-write* (subpath \"$d\"))" ;;
+      *) p="$p(deny file-read* file-write* (subpath \"$d\"))" ;;
+    esac
+  done
+  [ -n "$runs" ] && p="$p(deny file-read-data file-write* (subpath \"$runs\"))"
+  [ -n "$runs$inside" ] && p="$p(allow file-read* file-read-data file-write* (subpath \"$run\"))"
   p="$p(deny file-read* file-read-data file-write* (subpath \"$run/.check\"))"
   exec sandbox-exec -p "$p" "$@"
 elif command -v bwrap >/dev/null 2>&1; then
+  mkdir -p "$run/.check" # it must exist now: bwrap cannot hide a folder made later
   a=(--dev-bind / /)
   for d in "${hide[@]}"; do a+=(--tmpfs "$d"); done
-  [ -n "$runs" ] && a+=(--tmpfs "$runs" --bind "$run" "$run")
-  [ -d "$run/.check" ] && a+=(--tmpfs "$run/.check")
+  [ -n "$runs" ] && a+=(--tmpfs "$runs")
+  [ -n "$runs$inside" ] && a+=(--bind "$run" "$run")
+  a+=(--tmpfs "$run/.check")
   exec bwrap "${a[@]}" --chdir "$run" "$@"
 fi
 echo "michelin-sandboxed: WARNING: no sandbox-exec or bwrap here, running WITHOUT a wall: $*" >&2
