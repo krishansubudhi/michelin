@@ -58,9 +58,9 @@ Plain markdown, no `#` title line, in `subjects/<name>/`. Copy `subjects/claude_
 A CUJ for one subject goes in `subjects/<name>/cujs/`. A suite any agent can take goes in `cujs/<suite>/` and runs
 against any subject: `michelin run subjects/claude_code cujs/sanity/`.
 
-Keys: `instruction`, `timeout_s` and `expectations` are required. `story` (a note for humans), `given` (state setup seeds
-before the CUJ starts, never told to the program) and `needs` (names from `<cujs folder>/needs.md` that a subject
-answers with the same `##` heading in `howtorun.md`) are optional. Any other key is an error.
+Keys: `instruction`, `timeout_s` and `expectations` are required. `story` (a note for humans) and `needs` (names
+from `<cujs folder>/needs.md` that a subject answers with the same `##` heading in `howtorun.md`) are optional. Any
+other key is an error.
 
 ```yaml
 story: The user asks for the default country.
