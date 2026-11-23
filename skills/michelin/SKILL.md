@@ -27,7 +27,8 @@ michelin run                                     # toy-country passes; toy-name,
   everything a subject or a case creates goes in it. Every role is told its real path.
 - **`michelin-sandboxed`**: a wrapper for the command that starts the agent. Inside it the agent cannot read or
   write the michelin folder (the one you run `michelin` from), other runs' folders or `$RUNDIR/.check`. Its own
-  `$RUNDIR` stays open. Without it the agent can read the case file and the expectations.
+  `$RUNDIR` stays open. Without it the agent can read the case file and the expectations. It uses `sandbox-exec` on macOS and
+  `bwrap` on Linux (the Linux path is not tested yet); with neither it warns and runs unwalled.
 - **A case's private files**: what the agent must never see. Two places, both behind the sandbox. DATA is the
   case's own folder in the michelin folder, `<cujs folder>/<suite>/data/<case>/` (a fake website, a template): the
   executor runs it from there and never copies it into `$RUNDIR`. `$RUNDIR/.check` is for what a run makes (pid

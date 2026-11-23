@@ -24,25 +24,20 @@ OpenCode on Qwen 3.8 27B vs Gemma 4 26B, five SWE-bench Lite tasks, judged blind
 
 ## Why it is different
 
-- **Whole systems, real journeys.** A CUJ (critical user journey) is a few lines of yaml: what a user does and what should be true afterwards. Your agent runs as it really runs (CLI, server, chat app); an LLM sets it up, drives it, and tears it down. No harness code inside your agent.
-- **Must-fail controls.** Every suite ships a CUJ whose expectations are deliberately wrong. If it ever passes, the judges are rubber-stamping and the run can't be trusted.
-- **Blind judges.** Judges score each expectation from the recorded evidence alone, never the subject itself. `michelin compare` goes further: it replaces run ids, subject names and model names before judges pick the better of two runs, in both orders.
-- **Any metric you care about.** A subject can name metrics (cost, tokens, steps) for the executor to record; `michelin compare` tables them beside wall time, and judges never see them.
+- **Whole systems, real journeys.** A CUJ is a few lines of yaml: what a user does and what should be true afterwards. No harness code inside your agent.
+- **Must-fail controls.** Every suite ships a case whose expectations are wrong on purpose. If it passes, the judges are rubber-stamping.
+- **Blind judges.** They score the recorded evidence alone. `michelin compare` hides names and models and asks in both orders.
 
 ## Quickstart
 
-Needs Node 22.18+, `git`, `python3` (for the toy subject) and the [`claude` CLI](https://docs.anthropic.com/en/docs/claude-code), logged in. Every role is a `claude -p` call, so runs use your Claude plan or API credit.
-
-**Safety.** Every role runs `claude -p --permission-mode bypassPermissions`: it can run any command and edit any file your user can, with no prompt. Run subjects you don't trust in a sandbox or a VM.
+Needs Node 22.18+, `python3` and the [`claude` CLI](https://docs.anthropic.com/en/docs/claude-code), logged in. Every role is a `claude -p` call with `bypassPermissions`: run subjects you don't trust in a sandbox or a VM.
 
 ```sh
-npm install -g michelin-eval                   # installs the `michelin` command
+npm install -g michelin-eval
 mkdir my-evals && cd my-evals
-michelin init                                   # writes michelin.json and copies the toy subject
-michelin run                                    # the first judge scores alone; the others join only on a fail
+michelin init     # michelin.json and the toy subject
+michelin run      # about a minute
 ```
-
-Expected ending (about a minute):
 
 ```
 PASS  toy-country  passed 2/2  (done)
@@ -50,69 +45,18 @@ FAIL  toy-name     passed 0/1  (done)
 total: 1/2 CUJs passed
 ```
 
-`toy-name` is the must-fail control: the toy always answers "USA", so a healthy judge fails "The reply says Alice". One command makes one run folder, `.runs/<runid>/`, with a subfolder and `report.html` per CUJ (`.runs/<runid>/<cuj-id>/`).
+`toy-name` is the must-fail control, so that FAIL is the healthy result. The report is `.runs/<runid>/<cuj-id>/report.html`.
 
-**Roles.**
+## Where to go next
 
-- **executor**: Michelin's agent. It carries out the CUJ against your program and records the evidence (`--executor`).
-- **judges**: score that evidence against the CUJ's expectations (`--judges`); in `michelin compare` they pick the better run.
-- **agent under test**: the subject. Its own model is the subject's setting (e.g. `OPENCODE_MODEL` for OpenCode), never `--executor`.
-
-`michelin --help` gives an overview; `michelin run --help`, `michelin compare --help` and `michelin init --help` give each command's flags and an example.
-
-**Settings.** Flags override `./michelin.json`, which overrides the built-in defaults. For example, `michelin run --runs 3` runs every CUJ three times. Every key, flag and environment variable: [docs/settings.md](docs/settings.md).
-
-## Your own eval
-
-A subject is a folder of three plain-English files (`setup.md`, `howtorun.md`, `teardown.md`), and a CUJ is a few lines of yaml. The steps for writing both are in one place, the skill: [skills/michelin/SKILL.md](skills/michelin/SKILL.md). Hand it to your coding agent with `mkdir -p ~/.claude/skills && cp -r "$(npm root -g)/michelin-eval/skills/michelin" ~/.claude/skills/`.
-
-Ready-made subjects for Claude Code (`subjects/claude_code`) and agy (`subjects/agy`) pair with the quick checks in `cujs/sanity/`, where `p_` cases must pass and `f_` cases must fail: `michelin subjects/claude_code cujs/sanity/`.
-
-**Keep the agent away from the answers.** A case's files and old results sit on the same machine as the agent. Start the agent through `michelin-sandboxed` and it cannot read them. It uses `sandbox-exec` on macOS and `bwrap` on Linux (the Linux path is not tested yet); with neither it warns and runs unwalled.
-
-An A/B compares two versions of the agent under test, with the executor and the judges kept the same. The toy has two: `TOY_VARIANT=v1` (the default) answers, `TOY_VARIANT=v2` is a broken build that replies "I am not sure". Run the same CUJ on each, then blind judges pick the better run. Each `michelin run` prints `run dir: .runs/<id>/<cuj>`; give compare the `.runs/<id>` part, and it judges every CUJ both runs share. Wait for both runs to finish first.
-
-```sh
-TOY_VARIANT=v1 michelin run subjects/toy subjects/toy/cujs/toy/country.yaml
-TOY_VARIANT=v2 michelin run subjects/toy subjects/toy/cujs/toy/country.yaml
-michelin compare v1=.runs/<first run id> v2=.runs/<second run id>
-```
-
-v1 passes 2/2 and v2 1/2, and the compare picks v1 in both orders:
-
-```
-| run | W-L-T | win rate | Elo |
-| --- | --- | --- | --- |
-| v1 | 1-0-0 | 100% | 1016 |
-| v2 | 0-1-0 | 0% | 984 |
-```
-
-For your own agent, the two versions are whatever you are testing: two builds, two prompts, or two models set through the subject (for OpenCode, `OPENCODE_MODEL`).
-
-More: [Compare](docs/compare.md).
-
-## A real result: OpenCode
-
-[OpenCode](https://opencode.ai) on Gemma 4 26B (local Ollama), one run per CUJ (n=1), Sonnet 5.5 executor, three judges (Opus 5.5, Sonnet 5.5, Fable 5.2):
-
-| CUJ                     | Result | Expectations | Judge votes |
-| ----------------------- | ------ | ------------ | ----------- |
-| `opencode-fix_test`     | PASS   | 2/2          | 3/3, 3/3    |
-| `opencode-ask_repo`     | PASS   | 2/2          | 3/3, 3/3    |
-| `opencode-fail_control` | FAIL   | 0/2          | 0/3, 0/3    |
-
-The control failing is the healthy outcome. Details: [RESULTS.md](subjects/opencode/RESULTS.md).
-
-**Blind compare vs real tests.** On 5 SWE-bench Lite tasks, a judge that saw only the issue and each diff, never the test output, preferred Qwen 3.8 27B over Gemma 4 26B on every task with a winner. The hidden tests, run afterwards, agree wherever they can decide, but across two runs only 3 tasks had edits from both models, and the tests decide only 1 of those (agree, 1 of 1). Not a model ranking: see the before/after and limits in [RESULTS.md](subjects/opencode/RESULTS.md#swe-bench-lite-gemma-4-26b-vs-qwen-38-27b-judged-blind-to-the-tests-2026-11-18).
-
-## Docs
-
-- [Concepts](docs/concepts.md)
-- [Settings](docs/settings.md)
-- [Compare runs (A/B)](docs/compare.md)
-- [Write a subject](docs/write-a-subject.md)
-- [Subjects outside this repo](docs/external-subjects.md)
-- [Evaluate OpenCode](docs/opencode.md)
-- [Contributing](CONTRIBUTING.md)
+- **Write your own subject and CUJs, run them, fix failures:** [the skill](skills/michelin/SKILL.md). Hand it to your coding agent: `mkdir -p ~/.claude/skills && cp -r "$(npm root -g)/michelin-eval/skills/michelin" ~/.claude/skills/`
+- **Keep the agent away from the answers** (`michelin-sandboxed`): [the skill](skills/michelin/SKILL.md#words)
+- **Ready-made subjects and quick checks:** `michelin subjects/claude_code cujs/sanity/` (also `subjects/agy`; `p_` cases must pass, `f_` cases must fail)
+- **Compare two runs, blind (A/B):** [docs/compare.md](docs/compare.md)
+- **How it works, roles, judges:** [docs/concepts.md](docs/concepts.md)
+- **Every flag and setting:** [docs/settings.md](docs/settings.md), or `michelin --help`
+- **Subjects outside this repo:** [docs/external-subjects.md](docs/external-subjects.md)
+- **A real result, OpenCode:** [RESULTS.md](subjects/opencode/RESULTS.md), [how to run it](docs/opencode.md)
+- **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md)
 
 MIT licensed.
