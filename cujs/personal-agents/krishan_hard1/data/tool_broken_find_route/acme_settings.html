@@ -1,0 +1,15 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Acme settings</title>
+  </head>
+  <body>
+    <h1>Acme settings</h1>
+    {NOTE}
+    <p>Weekly digest emails are currently {STATUS}.</p>
+    <form method="post" action="/save">
+      <label><input type="checkbox" name="weekly_digest" {CHECKED} /> Weekly digest emails</label>
+      <button type="submit">Save</button>
+    </form>
+  </body>
+</html>
