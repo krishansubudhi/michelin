@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Your billing</title>
+  </head>
+  <body>
+    <h1>Your billing</h1>
+    {NOTE}
+    <p>Current plan: {PLAN}.</p>
+    <form method="post" action="billing">
+      <label><input type="radio" name="plan" value="monthly" /> Monthly</label>
+      <label><input type="radio" name="plan" value="annual" /> Yearly</label>
+      <button type="submit">Change billing</button>
+    </form>
+    <p>
+      <a href="./">Home</a> | <a href="pricing">Pricing</a> | <a href="help">Help</a> |
+      <a href="billing">Your billing</a>
+    </p>
+  </body>
+</html>
