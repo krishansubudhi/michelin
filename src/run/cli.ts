@@ -41,7 +41,8 @@ export const RUN_USAGE = `usage: michelin run [options] [<subject> <cuj> [cuj ..
                     (repeatable, first match wins)
   -h, --help        show this help
 Settings come from flags, then ./michelin.json (any subset of constructor, executor, destructor, judge, subject, cujs,
-runs, pair_judges, tiebreak), then the built-in defaults/settings.json; a --settings file replaces ./michelin.json.
+runs, pair_judges, tiebreak, sandbox_hide), then the built-in defaults/settings.json; a --settings file replaces
+./michelin.json.
 A subject, CUJ or settings path that does not exist as given is looked up under each folder in MICHELIN_SUBJECTS
 (colon-separated), e.g. MICHELIN_SUBJECTS=~/my-subjects michelin run my-app my-app/cujs/smoke/
 example: michelin run subjects/toy subjects/toy/cujs/toy/country.yaml --executor claude-sonnet-5-5@high`;

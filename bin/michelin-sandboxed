@@ -3,7 +3,7 @@
 #
 # Start it from the run folder ($RUNDIR). The command, and everything it starts, cannot read or write:
 #   1. the michelin folder (case files, their data, old results), every folder in $MICHELIN_SUBJECTS, and
-#      any more you list in the setting MICHELIN_SANDBOX_HIDE (colon-separated, e.g. ~/answers:~/notes)
+#      any more you list under sandbox_hide in michelin.json (michelin run passes them in MICHELIN_SANDBOX_HIDE)
 #   2. other runs' folders (the run folder's neighbours, when its parent is named "runs")
 #   3. the run folder's own .check/ (the harness's private notes)
 # The rest of the machine stays as it is, so the agent keeps its program and its login.

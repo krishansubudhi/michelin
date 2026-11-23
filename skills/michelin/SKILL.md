@@ -25,11 +25,24 @@ michelin run                                     # toy-country passes; toy-name,
 - **CUJ**: one journey, one yaml file: what to do and what must be true afterwards. Also called a case.
 - **`$RUNDIR`**: this CUJ's own scratch folder. Empty at setup, deleted after teardown. The agent works in it, and
   everything a subject or a case creates goes in it. Every role is told its real path.
-- **`michelin-sandboxed`**: a wrapper for the command that starts the agent. Inside it the agent has no access to the
-  michelin folder and `$RUNDIR/.check`. Anything the agent must not see goes in one of those two. Hide more folders with the
-  setting `MICHELIN_SANDBOX_HIDE=dir1:dir2`. It uses
-  `sandbox-exec` on macOS and `bwrap` on Linux (the Linux path is not tested yet); with neither it warns and runs
-  unwalled.
+- **`michelin-sandboxed`**: the wrapper that starts the agent inside the sandbox. See Sandbox, next.
+
+## Sandbox
+
+Start the agent with `michelin-sandboxed <command>`. The agent then has no access to:
+
+- the folder you run `michelin` from: your subjects, your cases and their data, old results in `.runs/`
+- `$RUNDIR/.check`
+- michelin's own install folder, and other runs' `$RUNDIR`s
+
+Anything the agent must not see goes in one of the first two. To hide more folders, list them in `michelin.json`:
+
+```json
+{ "sandbox_hide": ["~/answers", "/srv/notes"] }
+```
+
+It uses `sandbox-exec` on macOS and `bwrap` on Linux (the Linux path is not tested yet). With neither it warns and
+runs with no sandbox.
 
 ## Write a subject
 

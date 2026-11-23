@@ -4,7 +4,8 @@
 // this package (found from import.meta.url, never the current folder). michelin.json may hold any subset of the
 // roles below plus subject (string), cujs (list of strings), runs (whole number >= 1) and pair_judges (whole
 // number >= 1: how many of the first judges `michelin compare` asks, default 1) and tiebreak ("speed" or "none":
-// whether `michelin compare` breaks a judged tie by wall time, default "speed").
+// whether `michelin compare` breaks a judged tie by wall time, default "speed") and sandbox_hide (list of folders
+// michelin-sandboxed also hides from the agent under test).
 // Every entry is {"model": "<id>", "effort": "<low|medium|high|xhigh|max>"}.
 //
 //   constructor  runs <subject>/setup.md         (one entry)
@@ -18,7 +19,8 @@
 // Test: node --test test/settings.test.ts
 
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { EFFORTS, type Pick } from "../llm/models.ts";
 import type { Judging } from "../llm/judge.ts";
@@ -122,6 +124,8 @@ export type Config = {
   pairJudges: number;
   /** How `michelin compare` breaks a judged tie, e.g. "none"; default "speed". */
   tiebreak: Tiebreak;
+  /** More folders michelin-sandboxed hides from the agent under test, e.g. ["~/answers"]; [] if none. */
+  sandboxHide: string[];
 };
 
 /** Per extra michelin.json field: a check of its value and what it must be. */
@@ -131,6 +135,7 @@ const EXTRA: Record<string, [(v: unknown) => boolean, string]> = {
   runs: [(v) => Number.isInteger(v) && (v as number) >= 1, "a whole number >= 1"],
   pair_judges: [(v) => Number.isInteger(v) && (v as number) >= 1, "a whole number >= 1"],
   tiebreak: [(v) => v === "speed" || v === "none", '"speed" or "none"'],
+  sandbox_hide: [(v) => Array.isArray(v) && v.every((c) => typeof c === "string" && c !== ""), "a list of folders"],
 };
 
 /**
@@ -175,8 +180,8 @@ function parsePick(s: string, effort: Pick["effort"], flag: string): Pick {
  *
  * @param f     The checked file, e.g. {subject: "subjects/toy", runs: 2, pair_judges: 3}.
  * @param flags From the command line, e.g. {runs: 5}; only runs and tiebreak are read.
- * @returns     subject (undefined if none), cujs ([] if none), runs (default 1), pairJudges (default 1) and tiebreak
- *              (default "speed").
+ * @returns     subject (undefined if none), cujs ([] if none), runs (default 1), pairJudges (default 1), tiebreak
+ *              (default "speed") and sandboxHide ([] if none).
  */
 function extras(f: Record<string, unknown>, flags: Flags): Omit<Config, "settings"> {
   return {
@@ -185,6 +190,7 @@ function extras(f: Record<string, unknown>, flags: Flags): Omit<Config, "setting
     runs: flags.runs ?? (f.runs as number) ?? 1,
     pairJudges: (f.pair_judges as number) ?? 1,
     tiebreak: flags.tiebreak ?? (f.tiebreak as Tiebreak) ?? "speed",
+    sandboxHide: (f.sandbox_hide as string[]) ?? [],
   };
 }
 
@@ -214,12 +220,31 @@ export function resolveSettings(defaults: Settings, file: unknown, flags: Flags,
 }
 
 /**
+ * The value of MICHELIN_SANDBOX_HIDE for a run: the project folder (where michelin runs: its subjects, cases and old
+ * results), then michelin.json's sandbox_hide folders, then whatever the variable already held.
+ * bin/michelin-sandboxed reads it; every role inherits it. Pure.
+ *
+ * @param dirs From michelin.json, e.g. ["~/answers", "notes"]; "~/" is the home folder, others resolve from cwd.
+ * @param cwd  The project folder, e.g. "/work/my-evals". Left out when it is the home folder: the agent's login is there.
+ * @param home The home folder, e.g. "/Users/me".
+ * @param env  The variable's current value, e.g. "/srv/more"; undefined if unset.
+ * @returns    Colon-separated, e.g. "/work/my-evals:/Users/me/answers:/work/my-evals/notes:/srv/more".
+ */
+export function sandboxHideEnv(dirs: string[], cwd: string, home: string, env: string | undefined): string {
+  const abs = dirs.map((d) => (d === "~" || d.startsWith("~/") ? join(home, d.slice(1)) : resolve(cwd, d)));
+  return [...(resolve(cwd) === resolve(home) ? [] : [resolve(cwd)]), ...abs, ...(env ?? "").split(":")]
+    .filter(Boolean)
+    .join(":");
+}
+
+/**
  * Read the defaults and ./michelin.json (or the --settings file instead), then merge in the flags (resolveSettings).
  *
  * @param opts settingsPath: the --settings file, e.g. "my.json" (relative to cwd); omitted: cwd/michelin.json if it
  *             exists, else defaults alone. flags: from the command line, e.g. {runs: 2}. cwd: the folder holding
  *             michelin.json, e.g. process.cwd(). judging: how the judges are used, e.g. {all: false, baselines: []}.
- * @returns    The resolved config, with judging on its settings if given.
+ * @returns    The resolved config, with judging on its settings if given. Also sets MICHELIN_SANDBOX_HIDE in this
+ *             process's environment (sandboxHideEnv), for the roles it starts.
  * @throws     If a file is missing (only a named --settings file), not valid JSON, or holds a bad field.
  */
 export function loadConfig(opts: { settingsPath?: string; flags: Flags; cwd: string; judging?: Judging }): Config {
@@ -227,5 +252,6 @@ export function loadConfig(opts: { settingsPath?: string; flags: Flags; cwd: str
   const path = settingsPath ? resolve(cwd, settingsPath) : resolve(cwd, "michelin.json");
   const file = settingsPath || existsSync(path) ? readJson(path) : {};
   const c = resolveSettings(loadSettings(), file, flags, path);
+  process.env.MICHELIN_SANDBOX_HIDE = sandboxHideEnv(c.sandboxHide, cwd, homedir(), process.env.MICHELIN_SANDBOX_HIDE);
   return judging ? { ...c, settings: { ...c.settings, judging } } : c;
 }

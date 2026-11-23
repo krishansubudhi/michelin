@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { loadConfig, loadSettings, resolveSettings } from "../src/run/settings.ts";
+import { loadConfig, loadSettings, resolveSettings, sandboxHideEnv } from "../src/run/settings.ts";
 
 const h = { model: "claude-haiku-5-5", effort: "low" };
 const o = { model: "claude-opus-5-5", effort: "high" };
@@ -85,6 +85,7 @@ test("no file and no flags: the defaults, no subject, no CUJs, one run", () => {
     runs: 1,
     pairJudges: 1,
     tiebreak: "speed",
+    sandboxHide: [],
   });
 });
 
@@ -92,7 +93,7 @@ test("a partial file overrides only its fields; flags (--executor, --judges, --r
   const file = { executor: o, subject: "subjects/toy", cujs: ["subjects/toy/cujs/toy/"], runs: 2 };
   const c = resolved(file);
   const want = { settings: { ...defaults, executor: o }, subject: "subjects/toy", cujs: file.cujs, runs: 2 };
-  assert.deepEqual(c, { ...want, pairJudges: 1, tiebreak: "speed" });
+  assert.deepEqual(c, { ...want, pairJudges: 1, tiebreak: "speed", sandboxHide: [] });
   const f = resolved(file, {
     executor: "claude-sonnet-5-5",
     judges: "claude-opus-5-5,claude-sonnet-5-5@medium",
@@ -112,6 +113,7 @@ test("a bad file field or flag is refused, naming the file and the field (--exec
     [{ pair_judges: 0 }, /michelin.json: field "pair_judges"/],
     [{ pair_judges: "2" }, /michelin.json: field "pair_judges"/],
     [{ subject: 3 }, /michelin.json: field "subject"/],
+    [{ sandbox_hide: "~/answers" }, /michelin.json: field "sandbox_hide"/],
     [{ cujs: "a.yaml" }, /michelin.json: field "cujs"/],
     [{ executor: "m" }, /michelin.json: field "executor"/],
     [{ judge: [] }, /michelin.json: field "judge"/],
@@ -139,9 +141,20 @@ test("pair_judges: default 1, else michelin.json's whole number", () => {
   assert.equal(resolved({}).pairJudges, 1);
   assert.equal(resolved({ pair_judges: 3 }).pairJudges, 3);
   assert.equal(resolved({ tiebreak: "none" }).tiebreak, "none");
+  assert.deepEqual(resolved({}).sandboxHide, []);
+  assert.deepEqual(resolved({ sandbox_hide: ["~/answers"] }).sandboxHide, ["~/answers"]);
   assert.throws(() => resolved({ tiebreak: "fast" }), /tiebreak/);
   const cwd = mkdtempSync(join(tmpdir(), "config-"));
   assert.equal(loadConfig({ flags: {}, cwd }).pairJudges, 1, "no michelin.json");
   writeFileSync(join(cwd, "michelin.json"), JSON.stringify({ pair_judges: 2 }));
   assert.equal(loadConfig({ flags: {}, cwd }).pairJudges, 2);
+});
+
+test("sandboxHideEnv: the project folder, then sandbox_hide as absolute paths, then what the variable held", () => {
+  assert.equal(sandboxHideEnv([], "/home/me", "/home/me", undefined), "", "the home folder is never hidden");
+  assert.equal(sandboxHideEnv([], "/work/evals", "/home/me", ""), "/work/evals");
+  assert.equal(
+    sandboxHideEnv(["~/answers", "/srv/notes", "notes"], "/work/evals", "/home/me", "/a:/b"),
+    "/work/evals:/home/me/answers:/srv/notes:/work/evals/notes:/a:/b",
+  );
 });

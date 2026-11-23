@@ -50,7 +50,7 @@ total: 1/2 CUJs passed
 ## Where to go next
 
 - **Write your own subject and CUJs, run them, fix failures:** tell your coding agent "Load the skill `skills/michelin/SKILL.md` and follow it." It is one markdown file in this repo and in the npm package.
-- **Keep the agent away from the answers** (`michelin-sandboxed`): [the skill](skills/michelin/SKILL.md#words)
+- **Keep the agent away from the answers** (`michelin-sandboxed`): [the skill](skills/michelin/SKILL.md#sandbox)
 - **Ready-made subjects and quick checks:** `michelin subjects/claude_code cujs/sanity/` (also `subjects/agy`; `p_` cases must pass, `f_` cases must fail)
 - **Compare two runs, blind (A/B):** [docs/compare.md](docs/compare.md)
 - **How it works, roles, judges:** [docs/concepts.md](docs/concepts.md)
