@@ -30,10 +30,18 @@ michelin run                                     # toy-country passes; toy-name,
   `$RUNDIR` stays open. Without it the agent can read the case file and the expectations. It uses `sandbox-exec` on macOS and
   `bwrap` on Linux (the Linux path is not tested yet); with neither it warns and runs unwalled.
 - **Hidden from the agent**: two folders the sandbox blocks.
-  - `data/<case>/`, next to the case's yaml: files you write ahead of time, such as a fake website. The answer is
-    usually in them, so the executor runs them from there and never copies them into `$RUNDIR`.
-  - `$RUNDIR/.check`: files made during a run that the agent must not touch, such as the fake website's pid file,
-    so teardown can stop it.
+  - **The case's own folder.** A case that needs extra files, such as a fake website, keeps them in a folder named
+    after the case, inside `data/` beside its yaml. The answer is usually in them, so the executor runs them from
+    there and never copies them into `$RUNDIR`.
+
+    ```
+    cujs/personal-agents/krishan_hard1/
+      stuck_goal_one_new_approach.yaml        the case
+      data/stuck_goal_one_new_approach/       its files: acme_site.py, pricing.html, ...
+    ```
+
+  - **`$RUNDIR/.check`.** Files made during a run that the agent must not touch, such as the fake website's pid
+    file, so teardown can stop it.
 
 ## Write a subject
 
@@ -78,8 +86,8 @@ expectations:
    session", never a command: how to send it is the subject's job.
 2. Put the agent's files in `$RUNDIR` with their exact lines. Keep the answer out of them when finding it is the
    test.
-3. A case that needs a server keeps it in its `data/<case>/` folder and starts it from there
-   (`python3 <that folder>/site.py $RUNDIR > /dev/null 2>&1 &`). The server writes its pid to `$RUNDIR/.check/<name>.pid`.
+3. A case that needs a server keeps it in the case's own folder and starts it from there
+   (`python3 cujs/my-suite/data/my_case/site.py $RUNDIR > /dev/null 2>&1 &`). The server writes its pid to `$RUNDIR/.check/<name>.pid`.
 4. End with a step where the executor checks the world itself and records the output (`cat` a file, `curl` a page,
    `ls` a folder). Judges trust that step, not the agent's word.
 5. Write each expectation in plain words, so a judge can decide it from the recorded output alone. One fact per
