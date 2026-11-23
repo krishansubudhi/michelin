@@ -64,33 +64,11 @@ total: 1/2 CUJs passed
 
 ## Your own eval
 
-A subject is a folder of three plain-English files the LLM roles follow:
+A subject is a folder of three plain-English files (`setup.md`, `howtorun.md`, `teardown.md`), and a CUJ is a few lines of yaml. The steps for writing both are in one place, the skill: [skills/michelin/SKILL.md](skills/michelin/SKILL.md). Hand it to your coding agent with `mkdir -p ~/.claude/skills && cp -r "$(npm root -g)/michelin-eval/skills/michelin" ~/.claude/skills/`.
 
-- `setup.md`: install and start your program; print the handles (ports, tokens) later steps need.
-- `howtorun.md`: how to talk to it (a command, a URL, a chat).
-- `teardown.md`: what to stop and delete afterwards.
+Ready-made subjects for Claude Code (`subjects/claude_code`) and agy (`subjects/agy`) pair with the quick checks in `cujs/sanity/`, where `p_` cases must pass and `f_` cases must fail: `michelin subjects/claude_code cujs/sanity/`.
 
-Every CUJ gets its own setup, teardown and scratch folder, given to every role as `$RUNDIR`. Ready-made subjects for Claude Code (`subjects/claude_code`) and agy (`subjects/agy`) pair with four quick checks in `cujs/sanity/`: `michelin subjects/claude_code cujs/sanity/`.
-
-### Keep the agent away from the answers
-
-A case's files, its data and old results all sit in the michelin folder, on the same machine as the agent. Start the agent through `michelin-sandboxed` and it cannot read or write the michelin folder, other runs' folders, or `$RUNDIR/.check`:
-
-```
-cd $RUNDIR && michelin-sandboxed your-agent "MESSAGE"
-```
-
-Wrap the command that **starts** the agent: for a one-shot CLI that is the line in `howtorun.md`, for a server it is the start line in `setup.md`. Never wrap a case's own helpers. It uses `sandbox-exec` on macOS and `bwrap` on Linux (the Linux path is not tested yet); with neither it warns and runs unwalled. In `cujs/sanity/`, `p_` cases must pass and `f_` cases must fail. `f_sandbox.yaml` asks the agent for two hidden codes and must fail 0/2: a pass means the agent runs unwalled.
-
-A CUJ is a yaml file in `<subject>/cujs/`:
-
-```yaml
-instruction: |
-  Ask "What is my country?"
-timeout_s: 60
-expectations:
-  - The reply says USA.
-```
+**Keep the agent away from the answers.** A case's files and old results sit on the same machine as the agent. Start the agent through `michelin-sandboxed` and it cannot read them. It uses `sandbox-exec` on macOS and `bwrap` on Linux (the Linux path is not tested yet); with neither it warns and runs unwalled.
 
 An A/B compares two versions of the agent under test, with the executor and the judges kept the same. The toy has two: `TOY_VARIANT=v1` (the default) answers, `TOY_VARIANT=v2` is a broken build that replies "I am not sure". Run the same CUJ on each, then blind judges pick the better run. Each `michelin run` prints `run dir: .runs/<id>/<cuj>`; give compare the `.runs/<id>` part, and it judges every CUJ both runs share. Wait for both runs to finish first.
 
@@ -111,9 +89,7 @@ v1 passes 2/2 and v2 1/2, and the compare picks v1 in both orders:
 
 For your own agent, the two versions are whatever you are testing: two builds, two prompts, or two models set through the subject (for OpenCode, `OPENCODE_MODEL`).
 
-More: [Write a subject](docs/write-a-subject.md), [Compare](docs/compare.md).
-
-**Skill for your coding agent.** `mkdir -p ~/.claude/skills && cp -r "$(npm root -g)/michelin-eval/skills/michelin" ~/.claude/skills/` teaches Claude Code to write a subject and CUJs, run them, read the report, fix and rerun, and A/B with `michelin compare`.
+More: [Compare](docs/compare.md).
 
 ## A real result: OpenCode
 
@@ -131,7 +107,6 @@ The control failing is the healthy outcome. Details: [RESULTS.md](subjects/openc
 
 ## Docs
 
-- [Skill for agents: write a subject or a CUJ, run it, fix it](skills/michelin/SKILL.md)
 - [Concepts](docs/concepts.md)
 - [Settings](docs/settings.md)
 - [Compare runs (A/B)](docs/compare.md)
