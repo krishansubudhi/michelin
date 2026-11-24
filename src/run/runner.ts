@@ -21,7 +21,7 @@
 //   llm.log                     a timestamped line per step (run start, role, model start/end, errors), every CLI stderr line, and stdout when a call fails
 
 import { setupReport } from "./setup-report.ts";
-import { readFileSync, writeFileSync, mkdirSync, appendFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, appendFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadConfig, type Settings } from "./settings.ts";
@@ -47,6 +47,7 @@ import { checkUniqueIds, cujId, expandCujs, loadCuj, resolveArg, runGroups, unsu
 import { didRun, exitCode, summary } from "./summary.ts";
 import { dropScratch, makeScratch, scratchFor, scratchNote } from "./scratch.ts";
 import { acquireRunLock, lockFor } from "./runlock.ts";
+import { makeUniqueDir } from "./rundir.ts";
 
 /**
  * Build the constructor's prompt.
@@ -309,10 +310,10 @@ export async function runSubject(ctx: Ctx, subject: string, cujs: (readonly [str
 }
 
 /**
- * One run: make <parent>/<cuj-id>/ (-2, -3 ... on a repeat) and its scratch folder, run the subject on `cujs`, print
+ * One run: make <parent>/<cuj-id>/ (-2, -3 ... on a repeat, makeUniqueDir) and its scratch folder, run the subject on `cujs`, print
  * the run folder, statuses and report path.
  *
- * @param parent   This command's folder, e.g. ".runs/2026-11-22T22-40-00-000Z"; every CUJ's run is a subfolder.
+ * @param parent   This command's folder, e.g. ".runs/2026-11-22T22-40-00-000Z" (-2 ... when another run took that name); every CUJ's run is a subfolder.
  * @param subject  Subject folder, e.g. "subjects/toy".
  * @param settings Models per role.
  * @param cujs     [path, cuj] pairs for this run, in order.
@@ -324,9 +325,7 @@ async function runOnce(
   settings: Settings,
   cujs: (readonly [string, Cuj])[],
 ): Promise<Run> {
-  let dir = join(parent, cujId(cujs[0][0]));
-  for (let n = 2; existsSync(dir); n++) dir = join(parent, `${cujId(cujs[0][0])}-${n}`);
-  mkdirSync(dir, { recursive: true });
+  const dir = makeUniqueDir(join(parent, cujId(cujs[0][0])));
   console.log(runDirLine(dir));
   const read = (f: string) => readFileSync(join(subject, f), "utf8");
   const logPath = join(dir, "llm.log"); // CLI stderr (and stdout on failure) plus a start/end line per call, for tail -f
@@ -375,7 +374,7 @@ async function main() {
   const runs: Run[] = [];
   const release = await acquireRunLock(lockFor(subject)); // one run per subject: setup may pick ports by scanning (runlock.ts)
   try {
-    const parent = join(".runs", new Date().toISOString().replace(/[:.]/g, "-")); // one folder per command
+    const parent = makeUniqueDir(join(".runs", new Date().toISOString().replace(/[:.]/g, "-"))); // one folder per command
     for (let i = 0; i < times; i++)
       for (const group of groups) runs.push(await runOnce(parent, subject, settings, group));
   } finally {
