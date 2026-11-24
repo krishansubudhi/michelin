@@ -16,64 +16,55 @@ Data for a case lives in `data/<case>/`.
 
 ## Results
 
-One run per agent, 2026-11-23. Judge: claude-opus-5-5 high (first judge alone; the
-other two are called only on a fail).
+2026-11-24, at commit 7ab59e7 or later. Each cell is expectations passed. One run per
+cell, except `remembers_pairing_key`, which ran three times per agent.
+Judge: claude-opus-5-5 high; the other two judges vote only on a fail.
 
-### tool_broken_find_route
+| Case                          | claude_code, claude-opus-5-5 | agy, gemini-4-neon         | agy, gemini-4-hydrogen     |
+| ----------------------------- | ---------------------------- | -------------------------- | -------------------------- |
+| `tool_broken_find_route`      | 3/3                          | 3/3                        | **1/3 fail**               |
+| `stuck_goal_one_new_approach` | 3/3                          | 3/3                        | 3/3                        |
+| `remembers_pairing_key`       | **2/4 fail** (3 of 3 runs)   | **2/4 fail** (3 of 3 runs) | **2/4 fail** (3 of 3 runs) |
+| `said_in_passing`             | 3/3                          | 3/3                        | 3/3                        |
 
-| Agent       | Model                   | Result | Agent's time | Run                              |
-| ----------- | ----------------------- | ------ | ------------ | -------------------------------- |
-| claude_code | claude-opus-5-5, medium | 3/3    | 19 s         | `.runs/2026-11-23T16-09-12-279Z` |
-| agy         | gemini-4-neon, medium   | 3/3    | 66 s         | `.runs/2026-11-23T16-09-16-245Z` |
+All models ran at medium effort, inside `michelin-sandboxed`.
 
-| Expectation                                                                                                                | claude_code | agy  |
-| -------------------------------------------------------------------------------------------------------------------------- | ----------- | ---- |
-| After the agent's call the page says "currently OFF"                                                                       | pass        | pass |
-| mail/outbox lists only README.md; no mail sent from the owner's account                                                    | pass        | pass |
-| The reply says the digest is off, that the tool was broken so it used the settings page, and leaves the user nothing to do | pass        | pass |
+What failed:
 
-Both took the same route: ran the tool, saw `acme-gui` was missing, read the page
-address out of the script, posted the form with the box unchecked, then reloaded the
-page to confirm. Only speed differed.
+- `remembers_pairing_key`: on day 1 every agent asked for the key, connected and started
+  the vacuum. On day 2, in a new conversation, every agent asked for the key again.
+  None had saved it. Nine runs, nine times.
+- `tool_broken_find_route`: gemini-4-hydrogen saw that `acme-gui` was missing and stopped
+  ("I could not turn off the Acme weekly digest emails"). The other two read the page
+  address out of the script and switched the setting off there.
+
+`said_in_passing` passes for all three, and is easy: each agent wrote the allergy next
+to the flight in calendar.md and read it back the next day.
+
+### Earlier runs had a hint
+
+Before 7ab59e7 the agent's working folder was named after the case, for example
+`...-remembers_pairing_key`. With that name every agent passed every case, 12 runs out
+of 12. One agent's notes said "The workspace path name suggests this is a memory recall
+task". The folder name is now a hash. Results from before that commit do not count.
+
+### Runs
+
+| Case                          | claude_code                                       | agy, neon                                         | agy, hydrogen                                     |
+| ----------------------------- | ------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------- |
+| `tool_broken_find_route`      | `01-03-39-701Z`                                   | `01-03-46-617Z`                                   | `00-58-03-048Z`                                   |
+| `stuck_goal_one_new_approach` | `01-04-27-435Z`                                   | `01-05-11-066Z`                                   | `00-59-12-925Z`                                   |
+| `remembers_pairing_key`       | `01-05-20-936Z`, `01-14-57-784Z`, `01-16-19-968Z` | `01-06-45-886Z`, `01-15-04-736Z`, `01-17-38-193Z` | `01-00-28-055Z`, `01-15-11-912Z`, `01-16-56-704Z` |
+| `said_in_passing`             | `01-06-38-004Z`                                   | `01-08-54-582Z`                                   | `01-02-03-223Z`                                   |
+
+Run folders are `.runs/2026-11-24T<id>`.
 
 ## Run it
 
 ```
-michelin subjects/claude_code cujs/personal-agents/krishan_hard1/tool_broken_find_route.yaml
-michelin subjects/agy cujs/personal-agents/krishan_hard1/tool_broken_find_route.yaml
+michelin subjects/claude_code cujs/personal-agents/krishan_hard1/remembers_pairing_key.yaml
+michelin subjects/agy cujs/personal-agents/krishan_hard1/remembers_pairing_key.yaml
 ```
 
-Start the two a few seconds apart: runs started in the same millisecond share a run folder.
-
-### stuck_goal_one_new_approach
-
-Both agents ran inside `michelin-sandboxed`.
-
-| Agent       | Model                   | Result | Agent's time | Run                              |
-| ----------- | ----------------------- | ------ | ------------ | -------------------------------- |
-| claude_code | claude-opus-5-5, medium | 3/3    | 19 s         | `.runs/2026-11-23T22-42-55-829Z` |
-| agy         | gemini-4-neon, medium   | 3/3    | 70 s         | `.runs/2026-11-23T22-42-34-628Z` |
-
-Both agents pass every expectation, so this case does not yet separate them.
-
-### remembers_pairing_key
-
-| Agent       | Model                   | Result | Run                              |
-| ----------- | ----------------------- | ------ | -------------------------------- |
-| claude_code | claude-opus-5-5, medium | 4/4    | `.runs/2026-11-24T00-16-02-184Z` |
-| agy         | gemini-4-neon, medium   | 4/4    | `.runs/2026-11-24T00-16-12-272Z` |
-
-Both asked for the key on day 1, saved it (claude_code to its memory, agy to
-GEMINI.md) and reconnected on day 2 without asking again.
-
-### said_in_passing
-
-| Agent       | Model                   | Result | Run                              |
-| ----------- | ----------------------- | ------ | -------------------------------- |
-| claude_code | claude-opus-5-5, medium | 3/3    | `.runs/2026-11-24T00-35-11-384Z` |
-| agy         | gemini-4-neon, medium   | 3/3    | `.runs/2026-11-24T00-35-16-419Z` |
-
-Both wrote a peanut-free pad thai and said it was because of Mom.
-
-All four cases pass on both agents: 8 runs, 8 passes. One fact across two
-conversations does not separate them.
+For gemini-4-hydrogen, copy `subjects/agy` and change the model name in `howtorun.md`
+and `setup.md` to `gemini-4-hydrogen-medium`.
