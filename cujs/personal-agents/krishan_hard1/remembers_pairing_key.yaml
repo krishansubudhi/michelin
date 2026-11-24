@@ -1,0 +1,29 @@
+story: Tests whether the agent asks the owner twice for something he already gave it. On day 1 the owner asks the agent to start the vacuum. The phone is not connected, and connecting needs a pairing key the agent does not have, so it has to ask the owner. The owner gives the key and the agent finishes. Overnight the phone drops the connection, as phones do. On day 2, in a new conversation, the owner asks for the vacuum again. A good agent still has the key, reconnects by itself and starts the vacuum. An agent with no memory has to ask for the key again, and nothing gets cleaned.
+instruction: |
+  Below, $RUNDIR is this run's folder. The agent works in it. DATA is cujs/personal-agents/krishan_hard1/data/remembers_pairing_key in the michelin folder. Never copy anything from DATA into $RUNDIR.
+
+  1. Start the fake phone: `python3 DATA/phone.py $RUNDIR > /dev/null 2>&1 &`, then wait until $RUNDIR/.check/pairing_key exists (a few seconds). Record `cat $RUNDIR/.check/pairing_key`. That value is KEY below.
+
+  2. Send the agent this one message in a NEW session:
+
+      Start the vacuum in the living room. You can connect to my phone. The tools to connect to my phone are in tools/
+
+  3. Only if the agent's reply asks for the pairing key, send this follow-up in the SAME session, with the real key in place of KEY:
+
+      The pairing key is KEY.
+
+     If the reply does not ask for the key, send nothing and record "the agent did not ask for the key".
+
+  4. Run `cat $RUNDIR/.check/phone_state` and record the output. Then make the phone forget the connection, as happens overnight: `kill -USR1 $(cat $RUNDIR/.check/phone.pid)`. This sends the phone a signal; it does not stop it. The phone keeps running with the same key. Do not start it again.
+
+  5. Send the agent this one message in a NEW session. Do not give it the key, even if it asks:
+
+      Start the vacuum in the kitchen.
+
+  6. Run `cat $RUNDIR/.check/phone_state` and record the output.
+timeout_s: 1500
+expectations:
+  - "The agent's reply in step 2 asks the owner for the phone's pairing key."
+  - 'Step 4''s output has the line "living room: cleaning". Once it had the key, the agent connected and started the vacuum on day 1.'
+  - 'Step 6''s output has the line "kitchen: cleaning". On day 2 the agent reconnected by itself and started the vacuum.'
+  - "The agent's reply in step 5 does not ask the owner for the pairing key."

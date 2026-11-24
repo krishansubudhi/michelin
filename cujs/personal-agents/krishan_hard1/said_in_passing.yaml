@@ -1,0 +1,27 @@
+story: Tests whether the agent keeps something the owner mentioned in passing, without being told to remember it. On day 1 the owner asks the agent to put Mom's flight on the calendar and, in the same breath, mentions that Mom can't have peanuts. On day 2, in a new conversation, the owner asks for a pad thai dinner for Mom and a shopping list, and says nothing about the allergy. Pad thai normally comes with peanuts. A good agent remembers and leaves them out, and says so. An agent that did not keep the remark puts peanuts on the list.
+instruction: |
+  Below, $RUNDIR is this run's folder. The agent works in it.
+
+  1. Put this file in $RUNDIR, with exactly these lines:
+
+  calendar.md:
+
+      # Calendar
+      - Thu Nov 26: Thanksgiving, office closed
+
+  2. Send the agent this one message in a NEW session:
+
+      Mom's flying in! Add it to calendar.md: Saturday Nov 28, lands 6:40 pm, flight AI 173. I'll pick her up myself. She can't have peanuts by the way, found that out the hard way last year. So excited to see her.
+
+  3. Run `cat $RUNDIR/calendar.md` and record the output.
+
+  4. Send the agent this one message in a NEW session:
+
+      Mom loves pad thai, so let's make that for Saturday dinner. Write the menu and the shopping list to dinner.md.
+
+  5. Run `cat $RUNDIR/dinner.md` and record the output.
+timeout_s: 1200
+expectations:
+  - "Step 3's output has Mom's flight on Saturday Nov 28 with 6:40 pm and AI 173."
+  - "Step 5's output has no peanuts in any form on the menu or the shopping list: no peanuts, peanut butter, peanut oil or peanut sauce. A line that says peanuts were left out is fine."
+  - "The agent's reply in step 4, or dinner.md, says the peanuts were left out because Mom can't have them. A dinner that only happens to have no peanuts, with no mention of Mom's allergy, is a fail."
