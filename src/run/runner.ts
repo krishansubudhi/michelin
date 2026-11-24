@@ -4,7 +4,7 @@
 //   node src/run/runner.ts subjects/toy subjects/toy/cujs/toy/country.yaml   (--help for usage; `michelin` via bin/michelin.js; a folder instead of the .yaml runs every *.yaml in it, sorted, each a fresh run)
 // Test: npm test (no LLM, ~1 s). Live: the command above (one CUJ end to end). `michelin init`: init.ts; `michelin compare`: compare.ts.
 // CUJ files or folders come from the command line or michelin.json's cujs; with none it prints usage and an error to stderr and exits 2 before any setup. Steps (spec line 4):
-//   a. constructor LLM reads <subject>/setup.md, runs it, seeds the CUJs' given (once; Setup, schemas.ts; given.ts)
+//   a. constructor LLM reads <subject>/setup.md, runs it                    (once; Setup, schemas.ts)
 //   b. executor LLM gets howtorun.md + one CUJ instruction       (per CUJ, killed at timeout_s; ExecutorResult; runs in a fresh temp folder, told where the repo is so howtorun's relative paths resolve)
 //   c. destructor LLM reads <subject>/teardown.md and cleans up  (once, always; Teardown)
 //   d. settings.judge scores each CUJ that ran, in parallel with c (judge.ts: first judge, all + majority on a fail or flip)
@@ -44,7 +44,6 @@ import {
 } from "../llm/schemas.ts";
 import { reportUrl, runDirLine, writeReport } from "../report/report.ts";
 import { checkUniqueIds, cujId, expandCujs, loadCuj, resolveArg, runGroups, unsupported, type Cuj } from "./cujs.ts";
-import { playNote, seedNote, sharedGiven, unseeded, type Given } from "./given.ts";
 import { didRun, exitCode, summary } from "./summary.ts";
 import { dropScratch, makeScratch, scratchFor, scratchNote } from "./scratch.ts";
 import { acquireRunLock, lockFor } from "./runlock.ts";
@@ -54,14 +53,12 @@ import { acquireRunLock, lockFor } from "./runlock.ts";
  *
  * @param setup   Contents of <subject>/setup.md.
  * @param scratch The run's scratch folder, e.g. "/tmp/michelin/runs/x"; "" to leave it out.
- * @param given   The run's CUJ given state, to seed after setup; omitted if none.
  * @returns       The full prompt text.
  */
-export const constructorPrompt = (setup: string, scratch = "", given?: Given) =>
+export const constructorPrompt = (setup: string, scratch = "") =>
   [
     setup,
     ...(scratch ? [scratchNote(scratch)] : []),
-    ...(given ? seedNote(given) : []),
     "Do the steps above. Return ok, the steps you ran, and notes.",
     'If any step fails, stop and return ok: false with notes giving the reason, e.g. "harness not found: <path>".',
   ].join("\n\n");
@@ -73,7 +70,7 @@ const BROWSER_SKILL = fileURLToPath(new URL("../../skills/browser/SKILL.md", imp
  * Build the executor's prompt. It holds the instruction but never the expectations.
  *
  * @param howtorun    Contents of <subject>/howtorun.md.
- * @param cuj         The CUJ: its instruction, and its given (seeded by setup) if any.
+ * @param cuj         The CUJ: its instruction.
  * @param root        Absolute path of the michelin folder, e.g. "/srv/michelin"; howtorun's relative paths start there.
  * @param opts        setup: what setup reported (same text teardown gets), e.g. its PORT and TOKEN; "" if none.
  *                    out: absolute path of this CUJ's run folder, e.g. "/repo/.runs/<runid>/chat-name"; rundir: RUNDIR (scratch.ts). "" leaves either out.
@@ -82,7 +79,7 @@ const BROWSER_SKILL = fileURLToPath(new URL("../../skills/browser/SKILL.md", imp
  */
 export const executorPrompt = (
   howtorun: string,
-  cuj: { instruction: string; given?: Given },
+  cuj: { instruction: string },
   root: string,
   {
     setup = "",
@@ -95,7 +92,6 @@ export const executorPrompt = (
     "You are testing a program. How to run it:",
     howtorun,
     ...(setup ? [`Setup output (use these values; this is your instance):\n${setup}`] : []),
-    ...(cuj.given ? [playNote(cuj.given)] : []),
     ...(rundir ? [scratchNote(rundir)] : []),
     `The michelin folder is ${root}; howtorun's relative paths start there. Run each command in the folder howtorun gives (cd ${root} only if it gives none).`,
     "Your task:",
@@ -181,25 +177,21 @@ async function callRole<T>(ctx: Ctx, run: Run, role: RoleCall): Promise<Checked<
 }
 
 /**
- * a. Construct: the constructor LLM runs setup.md and seeds the given. Sets run.setup and run.setupError (failed if a
- * given key is not reported seeded).
+ * a. Construct: the constructor LLM runs setup.md. Sets run.setup and run.setupError.
  *
  * @param ctx   The run context.
  * @param run   The run index; writes constructor.json.
- * @param given The run's CUJ given state; omitted if none.
  */
-async function construct(ctx: Ctx, run: Run, given?: Given): Promise<void> {
+async function construct(ctx: Ctx, run: Run): Promise<void> {
   const c = await callRole<Setup>(ctx, run, {
     label: "constructor",
     pick: ctx.settings.constructor,
-    prompt: constructorPrompt(ctx.read("setup.md"), ctx.scratch, given),
+    prompt: constructorPrompt(ctx.read("setup.md"), ctx.scratch),
     schema: SETUP,
     file: "constructor.json",
   });
   run.setup = c.ok && c.data.ok ? "ok" : "failed";
   run.setupError = !c.ok ? c.error : c.data.ok ? null : c.data.notes || "constructor returned ok: false";
-  const missing = unseeded(given, c.ok ? c.data.notes : "");
-  if (run.setup === "ok" && missing.length) [run.setup, run.setupError] = ["failed", `given not seeded: ${missing}`];
 }
 
 /**
@@ -250,11 +242,10 @@ async function destruct(ctx: Ctx, run: Run): Promise<void> {
  *
  * @param ctx     The run context; ctx.dir must exist.
  * @param subject Subject folder name, recorded in run.json.
- * @param cujs    [path, cuj] pairs to execute, in order; all with one given, or none (else it throws before setup).
+ * @param cujs    [path, cuj] pairs to execute, in order.
  * @returns       The final run.json contents.
  */
 export async function runSubject(ctx: Ctx, subject: string, cujs: (readonly [string, Cuj])[]): Promise<Run> {
-  const given = sharedGiven(cujs);
   const run: Run = {
     subject,
     settings: ctx.settings,
@@ -291,7 +282,7 @@ export async function runSubject(ctx: Ctx, subject: string, cujs: (readonly [str
   };
   const beat = setInterval(() => ((run.heartbeat = new Date().toISOString()), save()), 10_000).unref();
   try {
-    await construct(ctx, run, given);
+    await construct(ctx, run);
     save();
     let crash: { e: unknown } | null = null;
     try {
@@ -381,7 +372,6 @@ async function main() {
   checkUniqueIds(files);
   const loaded = files.map((p) => [p, loadCuj(p)] as const);
   const groups = runGroups(loaded);
-  for (const g of groups) sharedGiven(g); // refuse mixed givens before any setup
   const runs: Run[] = [];
   const release = await acquireRunLock(lockFor(subject)); // one run per subject: setup may pick ports by scanning (runlock.ts)
   try {

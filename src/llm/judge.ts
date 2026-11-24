@@ -35,21 +35,17 @@ export type Outcome = {
  * @param expectations What must be true, e.g. ["The reply says USA."].
  * @param journey      The executor's steps, one JSON object per line.
  * @param reply        The executor's final reply.
- * @param given        The CUJ's given state, seeded into the subject before the run; omitted if none.
  * @returns            The full judge prompt.
  */
-export function judgePrompt(expectations: string[], journey: string, reply: string, given?: object): string {
+export function judgePrompt(expectations: string[], journey: string, reply: string): string {
   const list = expectations.map((e, i) => `${i + 1}. ${e.trim()}`).join("\n");
-  const seeded = given
-    ? `What was true before the run (seeded into the program, never told to it):\n${JSON.stringify(given, null, 2)}\nIt is not evidence: an expectation about using a fact passes only if the journey or reply shows the program used it.\n\n`
-    : "";
   return `You are a strict judge. Decide, from the evidence below only, whether each expectation holds.
 Do not run tools or look anything up. If the evidence doesn't show it, it fails.
 
 Expectations:
 ${list}
 
-${seeded}Journey (one JSON line per call made to the subject):
+Journey (one JSON line per call made to the subject):
 ${journey.trim() || "(empty: nothing was logged)"}
 
 Executor's final reply:
@@ -192,7 +188,7 @@ async function callJudges(
  * @param panel        judge: the judges from settings.json, e.g. [{model: "claude-opus-5-5", effort: "high"}], the first
  *                     runs alone; judging: all, or baselines whose <id>/verdict.json (id = the out folder's name) is read.
  * @param out          The CUJ's run folder, e.g. ".runs/<runid>/chat-country".
- * @param cuj          The CUJ's expectations, and its given (what was true before the run) if any.
+ * @param cuj          The CUJ's expectations.
  * @returns            score: "passed k/n", or "unjudged" if any expectation got no valid vote;
  *                     sessions: one Session per judge that ran, keyed "judge-<model>-<effort>";
  *                     error: set (and no judge called) if executor.json couldn't be read.
@@ -202,11 +198,11 @@ export async function judgeCuj(
   llm: Llm,
   { judge: judges, judging: { all = false, baselines = [] } = {} }: { judge: Pick[]; judging?: Judging },
   out: string,
-  { expectations, given }: { expectations: string[]; given?: object },
+  { expectations }: { expectations: string[] },
 ): Promise<{ score: string; sessions: Record<string, Session>; error?: string }> {
   const ev = readEvidence(out);
   if (ev.error !== undefined) return { score: "unjudged", sessions: {}, error: ev.error };
-  const ask = { prompt: judgePrompt(expectations, ev.journey, ev.reply, given), n: expectations.length };
+  const ask = { prompt: judgePrompt(expectations, ev.journey, ev.reply), n: expectations.length };
   const first = await callJudges(llm, all ? judges : judges.slice(0, 1), out, ask);
   const [firstVotes] = Object.values(first.votes);
   const baseline = readBaseline(baselines, basename(out), expectations);

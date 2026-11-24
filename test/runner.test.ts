@@ -81,19 +81,6 @@ test("setup and teardown are told the run's scratch folder, and only when there 
   assert.ok(!constructorPrompt("SETUP").includes("Scratch"));
 });
 
-test("the given goes to setup, executor and judge prompts only when there is one", () => {
-  const g = { memory: ["GIVEN-FACT"] };
-  assert.match(constructorPrompt("SETUP", "", g), /GIVEN-FACT[\s\S]*Seed given[\s\S]*given <key>: seeded/);
-  assert.match(
-    executorPrompt("HOWTO", { instruction: "do it", given: g }, "/repo"),
-    /you play the user[\s\S]*GIVEN-FACT/,
-  );
-  assert.ok(
-    !constructorPrompt("SETUP").includes("Given") &&
-      !executorPrompt("H", { instruction: "do" }, "/r").includes("seeded"),
-  );
-});
-
 // --- the run, with a fake LLM ---
 
 const pick = (model: string) => ({ model, effort: "low" as const });
@@ -269,31 +256,6 @@ test("a CUJ that throws still destructs and saves run.json", async () => {
   assert.deepEqual(read(ctx, "destructor.json").data, CLEAN);
   assert.deepEqual(runJson(ctx).cujs, {});
   assert.ok(existsSync(join(ctx.dir, "report.html")));
-});
-
-test("a CUJ's given reaches constructor, executor and judges; a key setup did not report seeded fails setup", async () => {
-  const withGiven = [["s/cujs/chat/one.yaml", { ...cuj("one"), given: { memory: ["GIVEN-FACT"] } }]] as const;
-  const seeded = { ...SETUP_OK, notes: "given memory: seeded" };
-  const { ctx, calls } = fake((m) => (m === "C" ? seeded : happy(m)));
-  assert.equal((await runSubject(ctx, "subj", [...withGiven])).setup, "ok");
-  for (const m of ["C", "E", "J"]) assert.match(calls.find((c) => c[0] === m)![1], /GIVEN-FACT/, `${m} sees the given`);
-  const quiet = fake(happy);
-  const run = await runSubject(quiet.ctx, "subj", [...withGiven]);
-  assert.match(String(run.setupError), /given not seeded: memory/);
-  assert.deepEqual(
-    quiet.calls.map((c) => c[0]),
-    ["C", "D"],
-  );
-});
-
-test("CUJs with different givens in one shared run are refused before any LLM call", async () => {
-  const { ctx, calls } = fake(happy);
-  const mixed = [two[0], ["s/cujs/chat/two.yaml", { ...cuj("two"), given: { clock: "07:10" } }]] as const;
-  await assert.rejects(
-    runSubject(ctx, "subj", [...mixed]),
-    /one\.yaml and s\/cujs\/chat\/two\.yaml have different given/,
-  );
-  assert.deepEqual(calls, []);
 });
 
 test("only the judge ever sees a CUJ's expectations", async () => {

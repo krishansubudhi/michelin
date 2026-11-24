@@ -20,11 +20,6 @@ test("judgePrompt numbers the expectations and includes the journey and reply", 
   assert.match(p, /1\. Says USA\.\n2\. Fast\./);
   assert.match(p, /\{"input":"q"\}[\s\S]*done[\s\S]*exactly 2/);
   assert.match(judgePrompt(["x"], "", ""), /\(empty: nothing was logged\)[\s\S]*\(empty\)/);
-  assert.match(
-    judgePrompt(["x"], "", "", { clock: "07:10" }),
-    /What was true[\s\S]*07:10[\s\S]*not evidence[\s\S]*Journey/,
-  );
-  assert.ok(!judgePrompt(["x"], "", "").includes("What was true"));
 });
 
 test("checkJudge accepts a valid JudgeResult with the right count", () => {

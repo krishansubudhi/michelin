@@ -95,13 +95,3 @@ test("missing-v1: setup fails, every CUJ is skipped, teardown runs, exit non-zer
   assertSessionsAndReport(dir, run, ["constructor", "destructor"]);
   assert.match(readFileSync(join(dir, "report.html"), "utf8"), /class="banner"[^>]*>Setup failed/);
 });
-
-test("given-v1 + codeword: setup seeds the given, so the toy knows the codeword; judged a pass", () => {
-  const { code, run } = runRunner([
-    "test/fixtures/subjects/given-v1",
-    "test/fixtures/subjects/given-v1/cujs/codeword.yaml",
-  ]);
-  assert.equal(code, 0);
-  assert.equal(run.setup, "ok");
-  assert.match(run.scores["codeword"], /^passed (\d+)\/\1$/);
-});

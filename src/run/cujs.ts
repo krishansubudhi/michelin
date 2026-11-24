@@ -41,11 +41,6 @@ export type Cuj = {
   timeout_s: number;
   /** What a good journey shows. Only the judge reads these, never the executor. */
   expectations: string[];
-  /** The world before the CUJ starts, e.g. {memory: ["..."], health: {sleep_h: 5}}: setup seeds it, the executor and
-   *  judges are told it, the subject never is. */
-  /** The world before the CUJ starts, e.g. {memory: ["..."], health: {sleep_h: 5}}: setup seeds it, the executor and
-   *  judges are told it, the subject never is. */
-  given?: Record<string, unknown>;
   /** Names of what the subject's howtorun.md must explain for this CUJ to run, e.g. ["New session", "Local port"].
    *  The yaml lists names defined in the CUJ root's needs.md; loadCuj adds that file's always-required ones. */
   needs?: string[];
@@ -98,7 +93,7 @@ export const unsupported = (howtorun: string, cuj: { needs?: string[] }): string
 };
 
 /** Every key a CUJ yaml may have; story is a note for humans, nothing reads it. */
-const CUJ_KEYS = ["instruction", "timeout_s", "expectations", "story", "given", "needs"];
+const CUJ_KEYS = ["instruction", "timeout_s", "expectations", "story", "needs"];
 
 /** True if c has instruction (string), timeout_s (number) and expectations (list of strings). Pure. */
 const hasCujTypes = (c: Record<string, unknown> | null | undefined): c is Cuj =>
@@ -106,9 +101,6 @@ const hasCujTypes = (c: Record<string, unknown> | null | undefined): c is Cuj =>
   typeof c?.timeout_s === "number" &&
   Array.isArray(c?.expectations) &&
   c.expectations.every((e: unknown) => typeof e === "string");
-
-/** True if v is a map ({key: value}), not a list, null or a scalar. */
-const isMap = (v: unknown) => typeof v === "object" && v !== null && !Array.isArray(v);
 
 /** True if a CUJ's needs is absent or a list of non-empty strings, e.g. ["Local port"]. */
 const needsOk = (v: unknown) =>
@@ -122,6 +114,7 @@ const needsOk = (v: unknown) =>
  */
 function cujProblem(c: Record<string, unknown> | null | undefined): string | null {
   if (!hasCujTypes(c)) return "needs instruction (string), timeout_s (number), expectations (list of strings)";
+  if ("given" in c) return "given: is no longer supported; seed the start state in the instruction instead";
   const unknown = Object.keys(c).filter((k) => !CUJ_KEYS.includes(k));
   if (unknown.length) return `unknown field: ${unknown.join(", ")} (allowed: ${CUJ_KEYS.join(", ")})`;
   if (!(c.timeout_s > 0 && Number.isFinite(c.timeout_s)))
@@ -129,7 +122,6 @@ function cujProblem(c: Record<string, unknown> | null | undefined): string | nul
   if (!c.expectations.length || c.expectations.some((e) => !e.trim())) {
     return "expectations must be a non-empty list of non-empty strings";
   }
-  if ("given" in c && !isMap(c.given)) return "given must be a map of key: value, e.g. given: {memory: [...]}";
   return needsOk(c.needs) ? null : "needs must be a list of names from needs.md, e.g. needs: [Local port]";
 }
 

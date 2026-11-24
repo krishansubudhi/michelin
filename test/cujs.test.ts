@@ -35,21 +35,17 @@ test("loadCuj refuses an unknown field, e.g. a typo, and names it", () => {
   const p = join(tmp("cuj-"), "typo.yaml");
   writeFileSync(p, "instruction: hi\ntimeout_s: 5\nexpectations: [a]\nexpectaions: [b]\n");
   assert.throws(() => loadCuj(p), /typo\.yaml: unknown field: expectaions/);
-  writeFileSync(
-    p,
-    "instruction: hi\ntimeout_s: 5\nexpectations: [a]\nstory: s\ngiven: {memory: [m], clock: '07:10'}\n",
-  );
-  assert.deepEqual(loadCuj(p).given, { memory: ["m"], clock: "07:10" });
   writeFileSync(p, "instruction: hi\ntimeout_s: 5\nexpectations: [a]\ncontext: c\n");
   assert.throws(() => loadCuj(p), /unknown field: context/);
 });
 
-test("loadCuj refuses a given that is not a map", () => {
-  const p = join(tmp("cuj-"), "given.yaml");
-  for (const g of ["[a, b]", "x", "", "5"]) {
-    writeFileSync(p, `instruction: hi\ntimeout_s: 5\nexpectations: [a]\ngiven: ${g}\n`);
-    assert.throws(() => loadCuj(p), /given\.yaml: given must be a map/);
-  }
+test("loadCuj refuses a removed given: key with one line saying so", () => {
+  const p = join(tmp("cuj-"), "old.yaml");
+  writeFileSync(p, "instruction: hi\ntimeout_s: 5\nexpectations: [a]\ngiven: {memory: [m]}\n");
+  assert.throws(
+    () => loadCuj(p),
+    /^Error: [^\n]*old\.yaml: given: is no longer supported; seed the start state in the instruction instead$/,
+  );
 });
 
 test("needs: names from the CUJ root's needs.md; unanswered lists those howtorun.md has no heading for", () => {

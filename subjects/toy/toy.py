@@ -7,8 +7,6 @@ ANSWERS = {"v1": "USA", "v2": "I am not sure"}
 def main (argv):
     question = argv[1]
     answer = ANSWERS.get(os.environ.get("TOY_VARIANT", "v1"), ANSWERS["v1"])
-    memory = os.environ.get("TOY_MEMORY", "")  # a file setup seeded from a CUJ's given, if any
-    known = f" (I remember: {open(memory).read().strip()})" if os.path.isfile(memory) else ""
-    print(f"answer to question {question} = {answer}{known}")
+    print(f"answer to question {question} = {answer}")
 if __name__ == "__main__":
     main(sys.argv)
