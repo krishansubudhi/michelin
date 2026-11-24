@@ -347,7 +347,7 @@ async function runOnce(
     log(`end ${m.model}/${m.effort} ${r.ms}ms${r.error ? ` error: ${r.error}` : ""}`);
     return r;
   };
-  const scratch = scratchFor(`${basename(parent)}-${basename(dir)}`);
+  const scratch = scratchFor(parent, basename(dir));
   makeScratch(scratch);
   const ctx = {
     settings,

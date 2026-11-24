@@ -3,6 +3,7 @@
 //
 // Test: npm test (scratch.test.ts, no LLM).
 
+import { createHash } from "node:crypto";
 import { mkdirSync, rmSync } from "node:fs";
 import { tmpdir, userInfo } from "node:os";
 import { basename, join } from "node:path";
@@ -28,11 +29,15 @@ export const SCRATCH_ROOT = join(TMP_ROOT, "runs");
 
 /**
  * The scratch folder for one run. Pure.
+ * The CUJ's id is hashed, never spelled out: the agent works in this folder, and a name like
+ * "...-remembers_pairing_key" tells it what is being tested.
  *
  * @param runDir The run's output folder, e.g. ".runs/2026-11-10T02-58-00-000Z".
- * @returns      e.g. "/tmp/michelin-agent/runs/2026-11-10T02-58-00-000Z".
+ * @param cuj    The CUJ's folder name, e.g. "chat-name"; "" for a run-wide folder.
+ * @returns      e.g. "/tmp/michelin-agent/runs/2026-11-10T02-58-00-000Z-3f2a9c1b".
  */
-export const scratchFor = (runDir: string) => join(SCRATCH_ROOT, basename(runDir));
+export const scratchFor = (runDir: string, cuj = "") =>
+  join(SCRATCH_ROOT, basename(runDir) + (cuj ? `-${createHash("sha256").update(cuj).digest("hex").slice(0, 8)}` : ""));
 
 /**
  * The line setup and teardown read, naming the scratch folder. Pure.

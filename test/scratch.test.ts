@@ -25,6 +25,9 @@ test("the temp folder is per OS user by default, never the shared /tmp/michelin;
 test("a run's scratch folder is named by its run id under <tmp>/runs", () => {
   assert.equal(SCRATCH_ROOT, `${TMP_ROOT}/runs`);
   assert.equal(scratchFor(".runs/2026-11-10T02-58"), `${TMP_ROOT}/runs/2026-11-10T02-58`);
+  const named = scratchFor(".runs/2026-11-10T02-58", "remembers_pairing_key");
+  assert.match(named, /\/runs\/2026-11-10T02-58-[0-9a-f]{8}$/); // the CUJ's name is hashed: the agent must not read the test off its folder
+  assert.notEqual(named, scratchFor(".runs/2026-11-10T02-58", "said_in_passing"));
   assert.ok(scratchNote("/tmp/michelin/runs/x").includes("/tmp/michelin/runs/x"));
 });
 
