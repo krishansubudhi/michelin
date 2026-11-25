@@ -3,10 +3,11 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  checkLine,
   compareMain,
   loadSide,
   runDirs,
@@ -201,6 +202,25 @@ test("compareMain: unnamed runs of one subject get #n; the panel is the first pa
   );
 });
 
+test("checkLine and compare.md: each run's own score becomes a CHECK PASS or CHECK FAIL line per game", async (t) => {
+  assert.equal(checkLine("passed 3/3"), "CHECK PASS (passed 3/3)");
+  assert.equal(checkLine("passed 2/4"), "CHECK FAIL (passed 2/4)");
+  assert.equal(checkLine(undefined), "CHECK FAIL (unjudged)");
+  t.mock.method(console, "log", () => {});
+  const cwd = mkdtempSync(join(tmpdir(), "cmp-"));
+  const [x, y] = ["run-x", "run-y"].map((id) => fakeRun(cwd, id, "m", "It said 13."));
+  const f = join(y, "run.json");
+  writeFileSync(f, JSON.stringify({ ...JSON.parse(readFileSync(f, "utf8")), scores: { "math-add": "passed 0/1" } }));
+  const r = await compareMain(
+    { runs: [`x=${x}`, `y=${y}`], flags: { judges: "J@high" }, hide: [] },
+    fakeJudge([]),
+    cwd,
+  );
+  assert.deepEqual(r.games[0].score, { a: undefined, b: "passed 0/1" });
+  const md = readFileSync(join(r.out, "compare.md"), "utf8");
+  assert.match(md, /- x: CHECK FAIL \(unjudged\)\n- y: CHECK FAIL \(passed 0\/1\)/);
+});
+
 test("speedBreak: a judged tie goes to the run 1.5x faster; close times, none or a real win stay", () => {
   assert.deepEqual(speedBreak("tie", { a: 1000, b: 1600 }, "speed"), { winner: "a", bySpeed: true });
   assert.deepEqual(speedBreak("tie", { a: 3000, b: 2000 }, "speed"), { winner: "b", bySpeed: true });
@@ -210,15 +230,9 @@ test("speedBreak: a judged tie goes to the run 1.5x faster; close times, none or
   assert.deepEqual(speedBreak("b", { a: 1000, b: 9000 }, "speed"), { winner: "b", bySpeed: false });
 });
 
-test("stepMs sums the executor steps' ms; timeTable shows seconds and marks a speed win", (t) => {
-  const dir = mkdtempSync(join(tmpdir(), "michelin-ms-"));
-  t.after(() => rmSync(dir, { recursive: true, force: true }));
-  writeFileSync(
-    join(dir, "executor.json"),
-    JSON.stringify({ ok: true, data: { steps: [{ ms: 1200 }, { ms: 300 }, {}] } }),
-  );
-  assert.equal(stepMs(dir), 1500);
-  assert.equal(stepMs(join(dir, "none")), undefined);
+test("stepMs sums the executor steps' ms; timeTable shows seconds and marks a speed win", () => {
+  assert.equal(stepMs({ ok: true, data: { steps: [{ ms: 1200 }, { ms: 300 }, {}] } }), 1500);
+  assert.equal(stepMs(undefined), undefined);
   const g: Game = { cuj: "c", a: "x", b: "y", winner: "a", judges: {}, ms: { a: 1500 }, bySpeed: true };
   assert.match(timeTable([g]), /\| c \| x \| y \| 1\.5 s \| \? \| x \(speed\) \|/);
 });

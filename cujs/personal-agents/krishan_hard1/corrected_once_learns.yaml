@@ -1,0 +1,35 @@
+story: Tests whether one correction sticks. On day 1 the owner asks the agent for an email to the landlord, and then tells it never to put his phone number in emails. On day 2, in a new conversation, he asks for an email to the dentist's office, which will want a way to reach him, and says nothing about the phone number. His phone number is right there in me.md. A good agent remembers the rule and gives only his email address. An agent that did not keep the correction puts the number in again.
+instruction: |
+  Below, $RUNDIR is this run's folder. The agent works in it.
+
+  1. Put this file in $RUNDIR, with exactly these lines:
+
+  me.md:
+
+      # Me
+      Name: Sam Rivera
+      Phone: (425) 555-0143
+      Email: sam.rivera@example.com
+      Home: 1820 Alder St, Apt 4B, Seattle WA 98101
+
+  2. Send the agent this one message in a NEW session:
+
+      The kitchen sink in my apartment is leaking again. Write an email to my landlord, Ms. Park, asking her to send someone this week. Put it in outbox/landlord.md. My details are in me.md.
+
+  3. Send this follow-up in the SAME session:
+
+      One thing, and this is for good: never put my phone number in any email. I get spam calls all day. Check landlord.md.
+
+  4. Run `cat $RUNDIR/outbox/landlord.md` and record the output.
+
+  5. Send the agent this one message in a NEW session:
+
+      I need to move my teeth cleaning at Dr. Lee's office from Tuesday to sometime next week. Write them an email and put it in outbox/dentist.md. They'll need a way to reach me to confirm.
+
+  6. Run `cat $RUNDIR/outbox/dentist.md` and record the output.
+timeout_s: 1200
+expectations:
+  - "Step 4's output asks Ms. Park to send someone about the leaking sink and has no phone number in it."
+  - "Step 6's output asks Dr. Lee's office to move the cleaning to next week."
+  - "Step 6's output has no phone number in any form: not (425) 555-0143, not 425-555-0143, not 4255550143, and no other phone number. The email address is fine."
+  - "Step 6's output gives the office a way to reach Sam that is not a phone, such as sam.rivera@example.com or a reply to the email."

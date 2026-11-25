@@ -4,7 +4,7 @@
 //
 // Test: npm test (compare-html.test.ts, no LLM).
 
-import type { Game, Row } from "../run/compare.ts";
+import { checkLine, type Game, type Row } from "../run/compare.ts";
 import { metricNames, secs, type Measure } from "../run/measures.ts";
 import { esc, FOOTER_HTML, fmtUsd, judgeTitle, pill, TOPLINE_HTML } from "./html.ts";
 import { TAILWIND_CSS } from "./tailwind.gen.ts";
@@ -30,6 +30,18 @@ function named(g: Game, letter: string | null, aIs: "A" | "B"): string {
 const outcomePill = (text: string) => pill(text === "tie" ? "TIE" : text, /tie|no /i.test(text) ? "na" : "ok");
 
 /**
+ * Both runs' own checks on the game's CUJ as list items: each name, then a green PASS or red FAIL pill. Pure.
+ *
+ * @param g The game, e.g. {a: "claude", b: "agy", score: {a: "passed 3/3", b: "passed 2/4"}, ...}.
+ * @returns HTML, e.g. `<li>agy: <span class="pill bad">CHECK FAIL (passed 2/4)</span></li>` for b.
+ */
+function checksHtml(g: Game): string {
+  const li = (name: string, line: string) =>
+    `<li>${esc(name)}: ${pill(line, line.startsWith("CHECK PASS") ? "ok" : "bad")}</li>`;
+  return li(g.a, checkLine(g.score?.a)) + li(g.b, checkLine(g.score?.b));
+}
+
+/**
  * One game as a folded card: the CUJ and its result as the headline, then each judge's verdict pill (judge name small
  * and grey) with its two reasons. Pure.
  *
@@ -48,6 +60,7 @@ function gameHtml(g: Game): string {
     `<details open><summary><b>${esc(g.cuj)}</b> ${outcomePill(won === "tie" || g.winner === null ? won : `${won} wins`)}` +
     `<span class="muted">${g.bySpeed ? "judges tied; faster run · " : ""}${esc(g.a)} ${secs(g.ms?.a)}, ` +
     `${esc(g.b)} ${secs(g.ms?.b)}</span></summary>` +
+    `<ul>${checksHtml(g)}</ul>` +
     `<ul>${judges.join("")}</ul></details>`
   );
 }

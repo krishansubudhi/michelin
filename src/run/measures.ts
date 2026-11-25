@@ -9,6 +9,18 @@
 import type { Loose } from "../report/view.ts";
 import type { Side } from "./compare.ts";
 
+/**
+ * A CUJ's program time: the sum of its executor steps' measured ms. Pure.
+ *
+ * @param executor Its executor.json, e.g. {ok: true, data: {steps: [{ms: 4000}, {ms: 200}]}}; undefined if unreadable.
+ * @returns        The total ms, e.g. 4200, or undefined when the run failed or no step has a numeric ms.
+ */
+export function stepMs(executor: Loose): number | undefined {
+  const steps = executor?.data?.steps;
+  const ms = Array.isArray(steps) ? steps.map((x) => x?.ms).filter((m) => typeof m === "number" && m >= 0) : [];
+  return ms.length ? ms.reduce((a: number, b: number) => a + b, 0) : undefined;
+}
+
 /** One run's times and metrics on one CUJ, e.g. {cuj: "toy-country", run: "gemma", ms: 4000, wall: 9000, metrics: {}}. */
 export type Measure = { cuj: string; run: string; ms?: number; wall?: number; metrics: Record<string, string> };
 

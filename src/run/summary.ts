@@ -37,6 +37,16 @@ export function summary(
 }
 
 /**
+ * A run's own check result on a CUJ, from its score. Pure.
+ *
+ * @param score The run.json score, e.g. "passed 3/3"; undefined when the run has none.
+ * @returns     "CHECK PASS (passed 3/3)" when every expectation passed, "CHECK FAIL (passed 2/4)" otherwise,
+ *              "CHECK FAIL (unjudged)" when there is no score.
+ */
+export const checkLine = (score?: string) =>
+  `CHECK ${/^passed (\d+)\/\1$/.test(score ?? "") ? "PASS" : "FAIL"} (${score ?? "unjudged"})`;
+
+/**
  * The process exit code for a finished run. Pure.
  *
  * @param run The run.json contents.

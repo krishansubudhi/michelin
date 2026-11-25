@@ -26,10 +26,12 @@ import { fmtUsd, judgeTitle } from "../report/html.ts";
 import { reportUrl } from "../report/report.ts";
 import type { Loose } from "../report/view.ts";
 import { UsageError } from "./cli.ts";
+import { checkLine } from "./summary.ts";
 import { loadConfig, type Tiebreak } from "./settings.ts";
-import { measures, metricsTable, readMetrics, secs, wallMs, type Measure } from "./measures.ts";
+import { measures, metricsTable, readMetrics, secs, stepMs, wallMs, type Measure } from "./measures.ts";
 
-export { measures, metricsTable, type Measure } from "./measures.ts";
+export { measures, metricsTable, stepMs, type Measure } from "./measures.ts";
+export { checkLine } from "./summary.ts";
 
 /**
  * One run in a comparison: its name, folder, identifiers to hide, and per CUJ id its evidence and task, program time
@@ -39,7 +41,10 @@ export type Side = {
   name: string;
   dir: string;
   ids: string[];
-  cujs: Record<string, { evidence: Evidence; task: Task; ms?: number; wall?: number; metrics: Record<string, string> }>;
+  cujs: Record<
+    string,
+    { evidence: Evidence; task: Task; ms?: number; wall?: number; metrics: Record<string, string>; score?: string }
+  >;
 };
 
 /** One game: two runs (by name) on one CUJ, the panel's winner (null: no valid verdict) and each judge's verdicts. */
@@ -53,6 +58,8 @@ export type Game = {
   ms?: { a?: number; b?: number };
   /** True when the judges tied and the speed tiebreak gave the game to the faster run. */
   bySpeed?: boolean;
+  /** Each run's own score on this CUJ from its run.json, e.g. {a: "passed 3/3", b: "passed 2/4"}. */
+  score?: { a?: string; b?: string };
 };
 
 /** One run's standing: wins, losses, ties, decided games, win rate (wins + ties/2 over decided games) and Elo. */
@@ -109,18 +116,6 @@ function cujIds(dir: string, run: Loose): string[] {
 }
 
 /**
- * A CUJ's program time: the sum of its executor steps' measured ms.
- *
- * @param dir The CUJ folder, e.g. ".runs/x/toy-country"; reads its executor.json.
- * @returns   The total ms, e.g. 4200, or undefined when the run failed or no step has a numeric ms.
- */
-export function stepMs(dir: string): number | undefined {
-  const steps = readJson(join(dir, "executor.json"))?.data?.steps;
-  const ms = Array.isArray(steps) ? steps.map((x) => x?.ms).filter((m) => typeof m === "number" && m >= 0) : [];
-  return ms.length ? ms.reduce((a: number, b: number) => a + b, 0) : undefined;
-}
-
-/**
  * Break a judged tie by speed: the run at least 1.5x faster wins it. Pure.
  *
  * @param winner   The judges' winner, e.g. "tie".
@@ -156,9 +151,10 @@ function cujEntry(dir: string, id: string, run: Loose): Side["cujs"][string] {
   return {
     evidence: ev.error === undefined ? ev : { journey: "", reply: `(evidence unreadable: ${ev.error})` },
     task: { instruction: String(run.defs?.[id]?.instruction ?? ""), expectations },
-    ms: stepMs(join(dir, id)),
+    ms: stepMs(executor),
     wall: wallMs(executor),
     metrics: readMetrics(executor),
+    score: typeof run.scores?.[id] === "string" ? run.scores[id] : undefined,
   };
 }
 
@@ -315,7 +311,8 @@ export function compareMd(rows: Row[], games: Game[], costUsd: number, measures:
     );
     const how = g.bySpeed ? " (judges tied; the faster run takes it)" : "";
     const t = `Time: ${g.a} ${secs(g.ms?.a)}, ${g.b} ${secs(g.ms?.b)}`;
-    return `## ${g.cuj}: ${g.a} vs ${g.b}\n\nWinner: ${won}${how}\n\n${t}\n\n${judges.join("\n")}`;
+    const check = `- ${g.a}: ${checkLine(g.score?.a)}\n- ${g.b}: ${checkLine(g.score?.b)}`;
+    return `## ${g.cuj}: ${g.a} vs ${g.b}\n\nWinner: ${won}${how}\n\n${t}\n\n${check}\n\n${judges.join("\n")}`;
   };
   return (
     [
@@ -376,7 +373,8 @@ export async function compareMain(
       const judged = r.winner === "first" ? "a" : r.winner === "second" ? "b" : r.winner;
       const ms = { a: x.cujs[cuj].ms, b: y.cujs[cuj].ms };
       const { winner, bySpeed } = speedBreak(judged, ms, tiebreak);
-      games.push({ cuj, a: x.name, b: y.name, winner, judges: r.judges, ms, bySpeed });
+      const score = { a: x.cujs[cuj].score, b: y.cujs[cuj].score };
+      games.push({ cuj, a: x.name, b: y.name, winner, judges: r.judges, ms, bySpeed, score });
     }
   }
   const rows = standings(

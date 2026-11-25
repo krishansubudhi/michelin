@@ -23,6 +23,20 @@ test("compareHtml: header bar, Head-to-head table, cost, and each game's verdict
   assert.doesNotMatch(html, /<1>/);
 });
 
+test("compareHtml: each game shows both runs' own CHECK PASS or CHECK FAIL line", () => {
+  const g = {
+    cuj: "c",
+    a: "x",
+    b: "y",
+    winner: "tie" as const,
+    judges: {},
+    score: { a: "passed 3/3", b: "passed 2/4" },
+  };
+  const html = compareHtml([], [g], 0);
+  assert.match(html, /<li>x: <span class="pill ok">CHECK PASS \(passed 3\/3\)<\/span><\/li>/);
+  assert.match(html, /<li>y: <span class="pill bad">CHECK FAIL \(passed 2\/4\)<\/span><\/li>/);
+});
+
 test("compareHtml: measures add a Times and metrics table with a column per metric; none leaves it out", () => {
   const rows = [{ name: "g", wins: 0, losses: 0, ties: 0, games: 0, winRate: 0, elo: 1000 }];
   const m = { cuj: "c", run: "g", ms: 1500, wall: 9000, metrics: { "<tok>": "1<2" } };

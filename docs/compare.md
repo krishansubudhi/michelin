@@ -17,6 +17,7 @@ Every pair of runs meets on every CUJ that both ran (a round robin). Runs are pa
 **Outputs** go in `.runs/compare-<ISO time>/`:
 
 - `compare.md`: the win-rate table (W-L-T, win rate = (wins + ties/2) / decided games, Elo starting at 1000 with K 32), the total judge cost, then each game's winner and each judge's reasons for both orders, with run names put back in.
+  Each game in compare.md and report.html also shows both runs' own result on that CUJ, from their run.json scores: `CHECK PASS (passed 3/3)` when every expectation passed, else `CHECK FAIL (passed 2/4)` (or `CHECK FAIL (unjudged)`).
 - `compare.json`: the same data, machine-readable.
 - `report.html`: a one-page "Head-to-head" report.
 - `<cuj>/<x>-vs-<y>/`: the exact prompts the judges saw, plus each judge's raw verdicts.
