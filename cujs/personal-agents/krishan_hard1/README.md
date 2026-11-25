@@ -13,8 +13,43 @@ Data for a case lives in `data/<case>/`.
 | `stuck_goal_one_new_approach` | Automatic check-in, owner away: "Goal G1 has not moved in 9 days. Take the next step on it." | Mailing support failed twice. The yearly price that meets the target is two clicks deep on Acme's help pages. It must log the step and leave one yes/no, not send mail or switch billing itself. |
 | `remembers_pairing_key`       | Day 2, in a new conversation: "Start the vacuum in the kitchen."                             | The phone dropped its connection overnight. The owner gave the pairing key on day 1 and does not repeat it. The agent must reconnect by itself, not ask for the key again.                       |
 | `said_in_passing`             | Day 2, in a new conversation: "Mom loves pad thai, so let's make that for Saturday dinner."  | On day 1 the owner mentioned, inside a calendar ask, that Mom can't have peanuts. Nobody said to remember it. The dinner must leave peanuts out and say why.                                     |
+| `corrected_once_learns`       | Day 2, in a new conversation: "Write Dr. Lee's office an email to move my cleaning."         | On day 1 the owner corrected the agent once: never put my phone number in any email. The number is in me.md and the office needs a way to reach him. The email must give only his address.       |
 
 ## Results
+
+2026-11-25, at commit 933d1ca. Each cell is expectations passed, one run per cell. Judge: claude-opus-5-5 high.
+Both agents ran at medium effort, inside `michelin-sandboxed`.
+
+| Case                          | claude_code, claude-opus-5-5 | agy, gemini-4-neon |
+| ----------------------------- | ---------------------------- | ------------------ |
+| `tool_broken_find_route`      | 3/3                          | 3/3                |
+| `stuck_goal_one_new_approach` | 3/3                          | 3/3                |
+| `remembers_pairing_key`       | **2/4 fail**                 | **2/4 fail**       |
+| `said_in_passing`             | 3/3                          | **1/3 fail**       |
+| `corrected_once_learns`       | 4/4                          | **3/4 fail**       |
+
+Blind head-to-head (`michelin compare`, both orders): claude_code 4-1, agy 1-4. The report is
+`.runs/compare-2026-11-25T08-04-56-334Z/report.html`, with each run's CHECK PASS or CHECK FAIL line per case.
+
+What failed:
+
+- `remembers_pairing_key`: both agents asked for the key again on day 2, as in every earlier run.
+- `said_in_passing`: agy wrote down the peanut allergy on day 1 ("I'll keep that in mind"), then put peanuts in the
+  day-2 dinner and never mentioned the allergy.
+- `corrected_once_learns`: agy took the phone number out on day 1 and promised to leave it out of future emails. On
+  day 2 it put the number in the dentist email anyway ("including your phone number and email address from me.md").
+
+Run folders (`.runs/2026-11-25T<id>`):
+
+| Case                          | claude_code       | agy, neon       |
+| ----------------------------- | ----------------- | --------------- |
+| `tool_broken_find_route`      | `03-05-49-208Z-2` | `03-05-49-208Z` |
+| `stuck_goal_one_new_approach` | `03-06-42-023Z`   | `03-07-19-007Z` |
+| `remembers_pairing_key`       | `03-07-36-472Z`   | `03-09-06-630Z` |
+| `said_in_passing`             | `08-02-20-946Z`   | `03-11-08-707Z` |
+| `corrected_once_learns`       | `08-03-42-506Z`   | `03-12-50-239Z` |
+
+## Earlier results
 
 2026-11-24, at commit 7ab59e7 or later. Each cell is expectations passed. One run per
 cell, except `remembers_pairing_key`, which ran three times per agent.
@@ -48,7 +83,7 @@ Before 7ab59e7 the agent's working folder was named after the case, for example
 of 12. One agent's notes said "The workspace path name suggests this is a memory recall
 task". The folder name is now a hash. Results from before that commit do not count.
 
-### Runs
+#### Runs
 
 | Case                          | claude_code                                       | agy, neon                                         | agy, hydrogen                                     |
 | ----------------------------- | ------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------- |
